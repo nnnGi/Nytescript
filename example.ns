@@ -1,0 +1,36 @@
+# This is a very useful piece of software
+£ Regional Currency Symbols supported :p
+
+func oopify(prefix) -> prefix + "oop"
+
+func join(elements, separator)
+	var result = ""
+	var len = len(elements)
+
+	for i = 0 to len then
+		var result = result + elements/i
+		if i != len - 1 then 
+			var result = result + separator
+		end
+	end
+
+	return result
+end
+
+func map(elements, fun)
+	var new_elements = []
+
+	for i = 0 to len(elements) then
+		append(new_elements, fun(elements/i))
+	end
+
+	return new_elements
+end
+
+print("Greetings Nytescript")
+
+for i = 0 to 5 then
+	print(join(map(["l", "sp"], oopify), ", "))
+end
+
+print("Goodbye World")
