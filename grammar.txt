@@ -22,6 +22,11 @@ EXTEND listA:               extend( {list: A}, {list: B} )
 POP FROM LIST:              var item = pop( {LIST}, {int: INDEX} )
 APPEND TO LIST:             append( {LIST}, {value: ITEM} )
 
+// CONSTRUCTORS //
+INTEGER:                    var value = int(value)
+FLOAT:                      var value = float(value)
+STRING:                     var value = str(value)
+
 // Type Checking (Returns TRUE or FALSE) //
 
 IS TYPE NUMBER:             is_number({item})
