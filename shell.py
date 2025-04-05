@@ -7,13 +7,13 @@ Libraries / Modules Pre Installed:
 
 Nytescript Shell, written by @_nnn_ (A.K.A @FlyBoyAce2) in Python 3.12.9 and 3.13.2	
 
-It is based on the intepreter https://github.com/davidcallanan/py-myopl-code by David Callanan
+It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 
-This is a Intepreted Programming Language made in Python named Nytescript. It has basic functions such as
+This is an interpreted programming Language made in Python named Nytescript. It has essential functions such as
 printing, input, conditional statements, definable functions, while and for loops, and the ability to run files and 
-exit the programme. It supports comments in regional currency symbols $, £, #, € and ¥ with format like python for single line comments.
+exit the programme. It supports comments in regional currency symbols $, £, #, € and ¥ with a format like Python for single line comments.
 
-Nothing is needed to be installed except the 'nyetscript.py' file and preferrably python 3.12 and above.
+Nothing needs to be installed except the 'nyetscript.py' file, preferably Python 3.12 and above.
 
 © Copyright @_nnn_ 2025 - 2025
 '''
