@@ -1,5 +1,5 @@
 # Nytescript
-Interpreted Programming Language made using Python
+Interpreted Programming Language made using Python, an example file is attached for reference
 
 # Grammar
 Find in the Grammer.txt file
