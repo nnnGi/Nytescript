@@ -1,0 +1,65 @@
+# Nytescript Grammar
+
+// COMMENTS //
+# THIS IS A COMMENT
+£ SO IS THIS
+$ AND THIS
+€ AND THIS
+¥ FINALLY SO IS THIS
+
+// FUNCTIONS //
+
+BASIC OUTPUT:               print( {string: TEXT} )
+RETURN to INTERPRETER:      print_ret( {string: TEXT} )
+BASIC INPUT:                var request = input()
+INTEGER INPUT:              var integer = input_int()
+CHARACTER INPUT:            var character = input_char()
+RUN FILE:                   run( {string: FILE} )
+END PROGRAM:                exit()
+CLEAR TERMINAL:             cls() OR clear()
+LIST LENGTH:                var length = len( {LIST} )
+EXTEND listA:               extend( {list: A}, {list: B} )
+POP FROM LIST:              var item = pop( {LIST}, {int: INDEX} )
+APPEND TO LIST:             append( {LIST}, {value: ITEM} )
+
+// Type Checking (Returns TRUE or FALSE) //
+
+IS TYPE NUMBER:             is_number({item})
+IS TYPE LIST:               is_list({item})
+IS TYPE STRING:             is_string({item})
+IS TYPE FUNCTION:           is_function({item})
+
+// DEFINING FUNCTIONS //
+
+func {NAME}( {INPUTS} )
+	# Stuff Here
+end
+
+{NAME}( {INPUTS} )
+
+// VARIABLE DECLARATION //
+var {VAR NAME} = '' or "" or [] or {NUMBER}
+
+// CONDITIONALS //
+var i = 0 
+
+# Expression must have numerical output
+if i == 1 then 
+	# Stuff Here
+elif i == 2 then
+	# Other Stuff Here
+else
+	# Last Thing Here
+end
+
+// LOOPS //
+
+# For loop
+for i = 0 to 10 then
+	# Do stuff
+end
+
+# While loop
+while 1 == 1 then
+	# Do stuff
+end
