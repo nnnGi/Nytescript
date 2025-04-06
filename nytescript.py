@@ -65,7 +65,7 @@ def string_with_arrows(text, pos_start, pos_end):
 DIGITS = '0123456789'
 LETTERS = string.ascii_letters
 LETTERS_DIGITS = LETTERS + DIGITS
-VERSION = '0.7'
+VERSION = '0.7.8'
 FILE_EXTENSION = '.ns'
 
 #######################################
@@ -233,12 +233,12 @@ class Lexer:
 		self.pos.advance(self.current_char)
 		self.current_char = self.text[self.pos.idx] if self.pos.idx < len(self.text) else None
 
-	def make_tokens(self):
+	def tokeniser(self):
 		tokens = []
 
 		while self.current_char != None:
 			if self.current_char in ' \t':
-					self.advance()
+				self.advance()
 			elif self.current_char in '#£¥€$':
 				self.skip_comment()
 			elif self.current_char in ';\n':
@@ -1473,7 +1473,7 @@ class Number(Value):
 			if other.value == 0:
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'Division by zero',
+					'Division by Zero',
 					self.context
 				)
 
@@ -1799,6 +1799,45 @@ class BuiltInFunction(BaseFunction):
 		return RTResult().success(Number.null)
 	execute_exit.arg_names = []
 
+	def execute_int(self, exec_ctx):
+		value = exec_ctx.symbol_table.get('value')
+		try:
+			result = int(str(value))
+		except ValueError:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"Cannot convert to Type: Integer",
+				exec_ctx
+			))
+		return RTResult().success(Number(result))
+	execute_int.arg_names = ['value']
+	
+	def execute_str(self, exec_ctx):
+		value = exec_ctx.symbol_table.get('value')
+		try:
+			result = str(value)
+		except ValueError:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"Cannot convert to Type: String",
+				exec_ctx
+			))
+		return RTResult().success(String(result))
+	execute_str.arg_names = ['value']
+	
+	def execute_float(self, exec_ctx):
+		value = exec_ctx.symbol_table.get('value')
+		try:
+			result = float(str(value))
+		except ValueError:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"Cannot convert to Type: Float",
+				exec_ctx
+			))
+		return RTResult().success(Number(result))
+	execute_float.arg_names = ['value']
+
 	def execute_is_number(self, exec_ctx):
 		is_number = isinstance(exec_ctx.symbol_table.get("value"), Number)
 		return RTResult().success(Number.true if is_number else Number.false)
@@ -1939,6 +1978,9 @@ BuiltInFunction.input         = BuiltInFunction("input")
 BuiltInFunction.input_int     = BuiltInFunction("input_int")
 BuiltInFunction.input_char    = BuiltInFunction("input_char")
 BuiltInFunction.clear         = BuiltInFunction("clear")
+BuiltInFunction.int           = BuiltInFunction("int")
+BuiltInFunction.str           = BuiltInFunction("str")
+BuiltInFunction.float         = BuiltInFunction("float")
 BuiltInFunction.is_number     = BuiltInFunction("is_number")
 BuiltInFunction.is_string     = BuiltInFunction("is_string")
 BuiltInFunction.is_list       = BuiltInFunction("is_list")
@@ -2253,6 +2295,9 @@ global_symbol_table.set("input_int", BuiltInFunction.input_int)
 global_symbol_table.set("input_char", BuiltInFunction.input_char)
 global_symbol_table.set("clear", BuiltInFunction.clear)
 global_symbol_table.set("cls", BuiltInFunction.clear)
+global_symbol_table.set("int", BuiltInFunction.int)
+global_symbol_table.set("str", BuiltInFunction.str)
+global_symbol_table.set("float", BuiltInFunction.float)
 global_symbol_table.set("is_num", BuiltInFunction.is_number)
 global_symbol_table.set("is_str", BuiltInFunction.is_string)
 global_symbol_table.set("is_list", BuiltInFunction.is_list)
@@ -2273,7 +2318,7 @@ def run(fn, text):
 
 	# Generate Tokens
 	lexer = Lexer(fn, text)
-	tokens, error = lexer.make_tokens()
+	tokens, error = lexer.tokeniser()
 	if error: return None, error
 	
 	# Generate AST
