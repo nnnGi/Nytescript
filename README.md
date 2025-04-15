@@ -1,5 +1,6 @@
 # Nytescript
 ![Python Version](https://img.shields.io/badge/Python-%3E=3.12-blue.svg) \
+By right this is a fork of https://github.com/davidcallanan/py-myopl-code
 It is a simple, interpreted esoteric programming language (esolang) implemented in Python. It's designed to be an easy language to use and remember syntax for,
 similar to the ancient BASIC. Examples of functions include ```print()```, ```input_char()```, ```run()``` (Runs Nytescript Files) and so on.
 
