@@ -19,15 +19,15 @@ Nothing needs to be installed except the 'nyetscript.py' file, preferably Python
 '''
 
 #######################################
-# IMPORTS
+# INTERNAL IMPORTS
 #######################################
 
 import string
-import os, sys
-import math
+import os, sys, math
+import time
 
 #######################################
-# STRINGS WITH ARROWS
+# EXTERNAL FUNCTIONS
 #######################################
 
 def string_with_arrows(text, pos_start, pos_end):
@@ -57,6 +57,20 @@ def string_with_arrows(text, pos_start, pos_end):
 
 		return result.replace('\t', '')
 
+def tryimport(module):
+	if type(module) != str:
+		raise TypeError("Module was not of correct type")
+	else:
+		try:
+			return __import__(module)
+		except:
+			raise ModuleNotFoundError(f"Module {module} was not found")
+
+#######################################
+# EXTERNAL IMPORTS
+#######################################
+
+# tqdm = tryimport('tqdm')
 
 #######################################
 # CONSTANTS
@@ -65,7 +79,7 @@ def string_with_arrows(text, pos_start, pos_end):
 DIGITS = '0123456789'
 LETTERS = string.ascii_letters
 LETTERS_DIGITS = LETTERS + DIGITS
-VERSION = '0.7.8'
+VERSION = '0.8.0'
 FILE_EXTENSION = '.ns'
 
 #######################################
@@ -572,6 +586,9 @@ class BreakNode:
 
 class ParseResult:
 	def __init__(self):
+		self.reset()
+
+	def reset(self):
 		self.error = None
 		self.node = None
 		self.last_registered_advance_count = 0
@@ -1838,6 +1855,33 @@ class BuiltInFunction(BaseFunction):
 		return RTResult().success(Number(result))
 	execute_float.arg_names = ['value']
 
+	def execute_list(self, exec_ctx):
+		value = exec_ctx.symbol_table.get('value')
+		try:
+			result = list(str(value))
+		except ValueError:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"Cannot convert to Type: List",
+				exec_ctx
+			))
+		return RTResult().success(List(result))
+	execute_list.arg_names = ['value']
+
+	# def execute_progress(self, exec_ctx):
+	# 	speed = float(str(exec_ctx.symbol_table.get('value')))
+	# 	smoothness = int(str(exec_ctx.symbol_table.get('value')))
+	# 	try:
+	# 		for i in tqdm.tqdm(range(smoothness)):
+	# 			time.sleep(speed)
+	# 		return RTResult().success(Number.null)
+	# 	except:
+	# 		return RTResult().failure(RTError(
+	# 			self.pos_start, self.pos_end,
+	# 			"Progress Bar Failed",
+	# 			exec_ctx))
+	# execute_progress.arg_names = ["value", "value"]
+
 	def execute_is_number(self, exec_ctx):
 		is_number = isinstance(exec_ctx.symbol_table.get("value"), Number)
 		return RTResult().success(Number.true if is_number else Number.false)
@@ -1948,7 +1992,12 @@ class BuiltInFunction(BaseFunction):
 			))
 
 		fn = fn.value
-
+		if not FILE_EXTENSION in fn:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				f"File Extensions should be {FILE_EXTENSION}",
+				exec_ctx
+			))
 		try:
 			with open(fn, "r") as f:
 				script = f.read()
@@ -1978,9 +2027,11 @@ BuiltInFunction.input         = BuiltInFunction("input")
 BuiltInFunction.input_int     = BuiltInFunction("input_int")
 BuiltInFunction.input_char    = BuiltInFunction("input_char")
 BuiltInFunction.clear         = BuiltInFunction("clear")
+BuiltInFunction.progress      = BuiltInFunction("progress")
 BuiltInFunction.int           = BuiltInFunction("int")
 BuiltInFunction.str           = BuiltInFunction("str")
 BuiltInFunction.float         = BuiltInFunction("float")
+BuiltInFunction.list          = BuiltInFunction("list")
 BuiltInFunction.is_number     = BuiltInFunction("is_number")
 BuiltInFunction.is_string     = BuiltInFunction("is_string")
 BuiltInFunction.is_list       = BuiltInFunction("is_list")
@@ -2297,6 +2348,7 @@ global_symbol_table.set("clear", BuiltInFunction.clear)
 global_symbol_table.set("cls", BuiltInFunction.clear)
 global_symbol_table.set("int", BuiltInFunction.int)
 global_symbol_table.set("str", BuiltInFunction.str)
+global_symbol_table.set("list", BuiltInFunction.list)
 global_symbol_table.set("float", BuiltInFunction.float)
 global_symbol_table.set("is_num", BuiltInFunction.is_number)
 global_symbol_table.set("is_str", BuiltInFunction.is_string)
@@ -2308,6 +2360,7 @@ global_symbol_table.set("extend", BuiltInFunction.extend)
 global_symbol_table.set("len", BuiltInFunction.len)
 global_symbol_table.set("run", BuiltInFunction.run)
 global_symbol_table.set("exit", BuiltInFunction.exit)
+# global_symbol_table.set("progress", BuiltInFunction.progress)
 
 def run(fn, text):
 	# Append '\n' if Shell
