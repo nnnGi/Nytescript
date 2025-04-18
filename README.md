@@ -26,6 +26,7 @@ Nytescript is not intended for practical use. Its primary purpose is for fun, ex
     ```
 3. Run ```shell.py``` from Python without arguments for the shell, and provide the filename of a Nytescript (.ns) file that you want to run as an argument in the ```python shell.py example.ns``` format
 
+Notes: No libraries apart from standard library are used
 
 # Further Information
 Nytescript Esolang, written by @\_nnn_ (A.K.A @FlyBoyAce2) in Python 3.12.9 and 3.13.2	
