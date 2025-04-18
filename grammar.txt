@@ -26,6 +26,7 @@ APPEND TO LIST:             append( {LIST}, {value: ITEM} )
 INTEGER:                    var value = int(value)
 FLOAT:                      var value = float(value)
 STRING:                     var value = str(value)
+LIST:                       var value = list(value)
 
 // Type Checking (Returns TRUE or FALSE) //
 
