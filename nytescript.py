@@ -79,7 +79,7 @@ def tryimport(module):
 DIGITS = '0123456789'
 LETTERS = string.ascii_letters
 LETTERS_DIGITS = LETTERS + DIGITS
-VERSION = '0.8.0'
+VERSION = '0.8.1'
 FILE_EXTENSION = '.ns'
 
 #######################################
@@ -346,7 +346,9 @@ class Lexer:
 		escape_characters = {
 			'n': '\n',
 			't': '\t',
-			'r': '\r'
+			'r': '\r',
+			'"': '"',
+			'\'': '\''
 		}
 
 		while self.current_char != None and (self.current_char != string_char or escape_character):
@@ -355,6 +357,8 @@ class Lexer:
 			else:
 				if self.current_char == '\\':
 					escape_character = True
+					self.advance()
+					continue
 				else:
 					string += self.current_char
 			self.advance()
@@ -1593,6 +1597,31 @@ class String(Value):
 		else:
 			return None, Value.illegal_operation(self, other)
 
+	def dived_by(self, other):
+		if isinstance(other, Number):
+			try:
+				return String(self.value[other.value]).set_context(self.context), None
+			except:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'Element at this index could not be retrieved from string because index is out of bounds',
+					self.context
+				)
+		else:
+			return None, Value.illegal_operation(self, other)
+
+	def get_comparison_eq(self, other):
+		if isinstance(other, String):
+			return Number(int(self.value == other.value)).set_context(self.context), None
+		else:
+			return None, Value.illegal_operation(self, other)
+
+	def get_comparison_ne(self, other):
+		if isinstance(other, String):
+			return Number(int(self.value != other.value)).set_context(self.context), None
+		else:
+			return None, Value.illegal_operation(self, other)
+
 	def is_true(self):
 		return len(self.value) > 0
 
@@ -1857,6 +1886,8 @@ class BuiltInFunction(BaseFunction):
 
 	def execute_list(self, exec_ctx):
 		value = exec_ctx.symbol_table.get('value')
+		if isinstance(value, List):
+			return RTResult().success(value)
 		try:
 			result = list(str(value))
 		except ValueError:
@@ -1971,14 +2002,16 @@ class BuiltInFunction(BaseFunction):
 	def execute_len(self, exec_ctx):
 		list_ = exec_ctx.symbol_table.get("list")
 
-		if not isinstance(list_, List):
+		if not isinstance(list_, List) and not isinstance(list_, String):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Argument must be list",
+				"Argument must be list or string",
 				exec_ctx
 			))
 
-		return RTResult().success(Number(len(list_.elements)))
+		if isinstance(list_, List):
+			return RTResult().success(Number(len(list_.elements)))
+		return RTResult().success(Number(len(list_.value)))
 	execute_len.arg_names = ["list"]
 
 	def execute_run(self, exec_ctx):
