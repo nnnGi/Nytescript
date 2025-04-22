@@ -24,7 +24,7 @@ Nytescript is not intended for practical use. Its primary purpose is for fun, ex
     source venv/bin/activate  # On Linux/MacOS
     venv\Scripts\activate  # On Windows
     ```
-3. Run ```shell.py``` from Python without arguments for the shell, and provide the filename of a Nytescript (.ns) file that you want to run as an argument in the ```python shell.py example.ns``` format OR install the CLI from setup files provided and use the CLU universally (same usage as shell.py)
+3. Run ```shell.py``` from Python without arguments for the shell, and provide the filename of a Nytescript (.ns) file that you want to run as an argument in the ```python shell.py example.ns``` format OR install the CLI from setup files provided and use the CLI universally (same usage as shell.py)
 
 Notes: No libraries apart from standard library are used
 
