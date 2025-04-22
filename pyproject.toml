@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "nytescript"
+version = "0.2.0"
+description = "CLI that runs the Nytescript Esolang"
+authors = ["_nnn_"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+nytescript = "shell:cli"
