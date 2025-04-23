@@ -1,59 +1,91 @@
-statements  : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
+sl-comments  : # Comment
+             : $ Comment
+             : £ Comment
+             : € Comment
+             : ¥ Comment
 
-statement		: KEYWORD:RETURN expr?
-						: KEYWORD:CONTINUE
-						: KEYWORD:BREAK
-						: expr
+number       : INT|FLOAT
 
-expr        : KEYWORD:VAR IDENTIFIER EQ expr
-            : comp-expr ((KEYWORD:AND|KEYWORD:OR) comp-expr)*
+string       : (SINGLE-QUOTE OR DOUBLE-QUOTE) characters (SINGLE-QUOTE OR DOUBLE-QUOTE)
 
-comp-expr   : NOT comp-expr
-            : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
+function_std : print(value) -> STDOUT
+             : clear() / cls() -> STDOUT
+             : run(STRING: FILEPATH) -> STDOUT + MEMORY
+             : exit() -> MEMORY
+             : append(LIST, value: item) -> LIST
+             : pop(LIST, value: index) -> LIST
+             : extend(LISTa, LISTb) -> LISTa
 
-arith-expr  :	term ((PLUS|MINUS) term)*
+function-ret : print_ret(value)
+             : input()
+             : input_int()
+             : input_char()
+             : int(value)
+             : float(value)
+             : str(value)
+             : list(value)
+             : is_num(value)
+             : is_str(value)
+             : is_list(value)
+             : is_func(value)
+             : len(STRING|LIST)
 
-term        : factor ((MUL|DIV) factor)*
+statements   : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
-factor      : (PLUS|MINUS) factor
-            : power
+statement		 : KEYWORD:return expr?
+						 : KEYWORD:continue
+						 : KEYWORD:break
+						 : expr
 
-power       : call (POW factor)*
+expr         : KEYWORD:var IDENTIFIER EQ expr
+             : comp-expr ((KEYWORD:and|KEYWORD:or comp-expr))*
 
-call        : atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
+comp-expr    : not comp-expr
+             : arith-expr ((EE|NE|LT|GT|LTE|GTE) arith-expr)*
+             : string ((EE|NE)) string
 
-atom        : INT|FLOAT|STRING|IDENTIFIER
-            : LPAREN expr RPAREN
-            : list-expr
-            : if-expr
-            : for-expr
-            : while-expr
-            : func-def
+arith-expr   : term ((PLUS|MINUS) term)*
 
-list-expr   : LSQUARE (expr (COMMA expr)*)? RSQUARE
+term         : factor ((MUL|DIV) factor)*
 
-if-expr     : KEYWORD:IF expr KEYWORD:THEN
-              (statement if-expr-b|if-expr-c?)
-            | (NEWLINE statements KEYWORD:END|if-expr-b|if-expr-c)
+factor       : (PLUS|MINUS) factor
+             : power
 
-if-expr-b   : KEYWORD:ELIF expr KEYWORD:THEN
-              (statement if-expr-b|if-expr-c?)
-            | (NEWLINE statements KEYWORD:END|if-expr-b|if-expr-c)
+power        : call (POW factor)*
 
-if-expr-c   : KEYWORD:ELSE
-              statement
-            | (NEWLINE statements KEYWORD:END)
+call         : atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
 
-for-expr    : KEYWORD:FOR IDENTIFIER EQ expr KEYWORD:TO expr 
-              (KEYWORD:STEP expr)? KEYWORD:THEN
-              statement
-            | (NEWLINE statements KEYWORD:END)
+atom         : INT|FLOAT|STRING|LIST|IDENTIFIER
+             : LPAREN expr RPAREN
+             : list-expr
+             : if-expr
+             : for-expr
+             : while-expr
+             : func-def
 
-while-expr  : KEYWORD:WHILE expr KEYWORD:THEN
-              statement
-            | (NEWLINE statements KEYWORD:END)
+list-expr    : LSQUARE (expr (COMMA expr)*)? RSQUARE
 
-func-def    : KEYWORD:FUN IDENTIFIER?
-              LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
-              (ARROW expr)
-            | (NEWLINE statements KEYWORD:END)
+if-expr      : KEYWORD:if expr KEYWORD:then
+               (statement if-expr-b|if-expr-c?)
+             | (NEWLINE statements KEYWORD:end|if-expr-b|if-expr-c)
+
+if-expr-b    : KEYWORD:elif expr KEYWORD:then
+               (statement if-expr-b|if-expr-c?)
+             | (NEWLINE statements KEYWORD:end|if-expr-b|if-expr-c)
+
+if-expr-c    : KEYWORD:else
+               statement
+             | (NEWLINE statements KEYWORD:end)
+
+for-expr     : KEYWORD:for IDENTIFIER EQ expr KEYWORD:to expr (KEYWORD:step expr)? KEYWORD:then
+               statement
+             | (NEWLINE statements KEYWORD:end)
+
+while-expr   : KEYWORD:while expr KEYWORD:then
+               statement
+             | (NEWLINE statements KEYWORD:end)
+
+func-def     : KEYWORD:func IDENTIFIER?
+               LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
+               (ARROW expr)
+             | (NEWLINE statements KEYWORD:end)
