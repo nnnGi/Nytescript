@@ -5,7 +5,7 @@ Libraries / Modules Pre Installed:
 	- math
 	- string
 
-Nytescript Shell and Intepreter, written by @_nnn_ (A.K.A @FlyBoyAce2) in Python 3.12.9 and 3.13.2	
+Nytescript Shell and Intepreter, written by @_nnn_ (A.K.A @FlyBoyAce2) in Python 3.12.9, 3.13.2 and 3.13.3	
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 
@@ -21,8 +21,9 @@ Nothing needs to be installed except the 'nytescript.py' file, preferably Python
 import nytescript
 import os, sys, platform
 
-def shell():
+def shell() -> None:
 	os.system('clear' if os.name == 'posix' else 'cls')
+	# INTEPRETER_LANG = ((sys.version.split(' (')[1]).split(') ['))[0]
 	INTEPRETER_LANG = sys.version.split(' [')[0]
 	BOOT_INFO = f'Nytescript {nytescript.VERSION} [Python {INTEPRETER_LANG}] on {platform.system() if platform.system() != 'Darwin' else 'Darwin (MacOS)'}'
 
@@ -35,31 +36,29 @@ def shell():
 		if error:
 			print(error.as_string())
 		elif result:
-
 			if len(result.elements) == 1:
-				intepret_result = repr(result.elements[0]).rstrip('\n0')
-				print(intepret_result)
+				if repr(result.elements[0]) != 'NoneType':
+					print(repr(result.elements[0]))
+				else:
+					...
 			else:
 				print(repr(result))
 
-def intepreter():
-	result, error = nytescript.run('<program>', f'run(\'{sys.argv[1]}\')')
+def intepreter(file) -> None:
+	result, error = nytescript.run('<program>', f'run(\'{file}\')')
 
 	if error:
 		print(error.as_string())
 	elif result:
+		...
 
-		if len(result.elements) == 1:
-			intepret_result = repr(result.elements[0]).rstrip('\n0')
-			print(intepret_result)
-		else:
-			print(repr(result))
-
-
-if __name__ == '__main__':
+def cli() -> None:
 	if len(sys.argv) == 1:
 		shell()
 	elif len(sys.argv) == 2:
-		intepreter()
+		intepreter(sys.argv[1])
 	else:
-		raise Exception(f"Too many arguments were passed into Python Shell.py")
+		raise Exception(f"Too many arguments were passed into Nytescript CLI")
+	
+if __name__ == '__main__':
+	cli()
