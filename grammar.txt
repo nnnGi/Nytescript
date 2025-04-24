@@ -4,31 +4,33 @@ sl-comments  : # Comment
              : € Comment
              : ¥ Comment
 
-number       : INT|FLOAT
+Number       : INT|FLOAT
 
-string       : (SINGLE-QUOTE OR DOUBLE-QUOTE) characters (SINGLE-QUOTE OR DOUBLE-QUOTE)
+NoneType     : [Returned by function_std]
 
-function_std : print(value) -> STDOUT
-             : clear() / cls() -> STDOUT
-             : run(STRING: FILEPATH) -> STDOUT + MEMORY
-             : exit() -> MEMORY
-             : append(LIST, value: item) -> LIST
-             : pop(LIST, value: index) -> LIST
-             : extend(LISTa, LISTb) -> LISTa
+String       : (SINGLE-QUOTE OR DOUBLE-QUOTE) characters (SINGLE-QUOTE OR DOUBLE-QUOTE)
 
-function-ret : print_ret(value)
-             : input()
-             : input_int()
-             : input_char()
-             : int(value)
-             : float(value)
-             : str(value)
-             : list(value)
-             : is_num(value)
-             : is_str(value)
-             : is_list(value)
-             : is_func(value)
-             : len(STRING|LIST)
+function_std : print LPAREN value RPAREN -> STDOUT
+             : (CLEAR OR CLS) LPAREN RPAREN -> STDOUT
+             : run LPAREN STRING: FILEPATH RPAREN -> STDOUT + MEMORY
+             : exit LPAREN RPAREN -> MEMORY
+             : append LPAREN LIST, value: item RPAREN -> LIST
+             : pop LPAREN LIST, value: index RPAREN -> LIST
+             : extend LPAREN LISTa, LISTb RPAREN -> LISTa
+
+function-ret : print_ret LPAREN value RPAREN
+             : input LPAREN RPAREN
+             : input_int LPAREN RPAREN
+             : input_char LPAREN RPAREN
+             : int LPAREN value RPAREN
+             : float LPAREN value RPAREN
+             : str LPAREN value RPAREN
+             : list LPAREN value RPAREN
+             : is_num LPAREN value RPAREN
+             : is_str LPAREN value RPAREN
+             : is_list LPAREN value RPAREN
+             : is_func LPAREN value RPAREN
+             : len LPAREN STRING|LIST RPAREN
 
 statements   : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
