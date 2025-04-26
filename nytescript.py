@@ -213,9 +213,10 @@ KEYWORDS = [
 ]
 
 SYMBOL_TABLE = [
-	'NULL',     # 0 Null Value or None
-	'FALSE',    # 1 False Value or (0)
-	'TRUE',     # 2 True Value or (1)
+	'Null',     # 0 Null Value or (0)
+	'False',    # 1 False Value or (0)
+	'True',     # 2 True Value or (1)
+	'None',     # 3 None Value or (NoneType)
 
 ]
 
@@ -261,7 +262,7 @@ class Lexer:
 		while self.current_char != None:
 			if self.current_char in ' \t':
 				self.advance()
-			elif self.current_char in '#£¥€$':
+			elif self.current_char in '#£¥€':
 				self.skip_comment()
 			elif self.current_char in ';\n':
 				tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
@@ -1490,6 +1491,8 @@ class NoneType(Value):
 	def __repr__(self):
 		return 'NoneType'
 
+NoneType.none = NoneType()
+
 class Number(Value):
 	def __init__(self, value):
 		super().__init__()
@@ -2389,6 +2392,7 @@ global_symbol_table = SymbolTable()
 global_symbol_table.set(SYMBOL_TABLE[0], Number.null)
 global_symbol_table.set(SYMBOL_TABLE[1], Number.false)
 global_symbol_table.set(SYMBOL_TABLE[2], Number.true)
+global_symbol_table.set(SYMBOL_TABLE[3], NoneType.none)
 global_symbol_table.set("math_pi", Number.math_PI)
 global_symbol_table.set("math_e", Number.math_E)
 global_symbol_table.set("print", BuiltInFunction.print)
