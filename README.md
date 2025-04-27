@@ -46,6 +46,8 @@ Nothing needs to be installed except the ```nytescript.py``` and ```shell.py``` 
 ```
 # This is a very useful piece of software
 £ Regional Currency Symbols supported :p
+€ Test
+¥ yay
 
 func oopify(prefix) -> prefix + "oop"
 
@@ -61,6 +63,15 @@ func join(elements, separator)
 	end
 
 	return result
+end
+
+func sort(l)
+    for i = 0 to len(l) then
+        if not is_num(l/i) then
+            return 'Failed'
+        end
+    end
+    return sorted(l, False)
 end
 
 func map(elements, fun)
@@ -79,5 +90,11 @@ for i = 0 to 5 then
 	print(join(map(["l", "sp"], oopify), ", "))
 end
 
+for i = 0 to 10000000 then
+	print(i)
+end
+
+var num = 8246573910
 print("Goodbye World")
+print(num)
 ```
