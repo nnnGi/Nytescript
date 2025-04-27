@@ -1,4 +1,6 @@
 # 📥 Patch Notes:
+## Comments
+- Removed '$' as a symbol for comments (foreshadowing)
 ## Types
 - NoneType is now accessible to be returned by functions as the keyword ```None```
 - ```TRUE``` is now ```True```
