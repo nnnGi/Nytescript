@@ -1638,6 +1638,19 @@ class String(Value):
 		else:
 			return None, Value.illegal_operation(self, other)
 
+	def powed_by(self, other):
+		if isinstance(other, Number):
+			try:
+				return String(self.value[::other.value]).set_context(self.context), None
+			except:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'String cannot sliced stepping with this type',
+					self.context
+				)
+		else:
+			return None, Value.illegal_operation(self, other)
+
 	def get_comparison_eq(self, other):
 		if isinstance(other, String):
 			return Number(int(self.value == other.value)).set_context(self.context), None
@@ -1996,13 +2009,13 @@ class BuiltInFunction(BaseFunction):
 		reverse = exec_ctx.symbol_table.get("value")
 
 		if not isinstance(list_, List):
-			return RTResult.failure(RTError(
+			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
 				"First Argument must be list",
 				exec_ctx
 			))
 		if not isinstance(reverse, Number):
-			return RTResult.failure(RTError(
+			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
 				"Second Argument must be Number / Boolean",
 				exec_ctx
