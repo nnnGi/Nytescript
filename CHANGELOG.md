@@ -9,8 +9,9 @@
 ## Functions
 - Added ```sorted()``` function with args ```iterable (String or List) and reverse (True or False)```
 - Added ```is_in()``` function with args ```iterable (String or List) and item (Any Type)```
-## Strings
-- Made string steppable using ```'str'^Number``` with ```'str'^-1``` reversing the list by stepping one backwards
+## Iterable Stepping
+- Made strings steppable using ```'str'^Number``` with ```'str'^-1``` reversing the string by stepping one backwards
+- Made lists steppable using ```[]^Number``` with ```[]^-1``` reversing the list by stepping one backwards
 ## VS Code Extension
 - Make VSCode Extension for Syntax Highlighting in the Language
 
