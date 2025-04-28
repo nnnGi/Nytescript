@@ -9,7 +9,8 @@
 ## Functions
 - Added ```sorted()``` function with args ```iterable (String or List) and reverse (True or False)```
 - Added ```is_in()``` function with args ```iterable (String or List) and item (Any Type)```
-
+## VS Code Extension
+- Make VSCode Extension for Syntax Highlighting in the Language
 
 # 🐞 Bug Fixes:
 None
