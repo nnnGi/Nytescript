@@ -1645,7 +1645,7 @@ class String(Value):
 			except:
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'String cannot sliced stepping with this type',
+					'String cannot do slice stepping with this type',
 					self.context
 				)
 		else:
@@ -1724,6 +1724,19 @@ class List(Value):
 		else:
 			return None, Value.illegal_operation(self, other)
 	
+	def powed_by(self, other):
+		if isinstance(other, Number):
+			try:
+				return List(self.elements[::other.value]).set_context(self.context), None
+			except:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'List cannot do slice stepping with this type',
+					self.context
+				)
+		else:
+			return None, Value.illegal_operation(self, other)
+
 	def copy(self):
 		copy = List(self.elements)
 		copy.set_pos(self.pos_start, self.pos_end)
