@@ -1,0 +1,12 @@
+# This is a Nytescript File that includes a function that can solve the leetcode question 'Palindrome Number'
+
+func Solution(num)
+    var num = String(num)
+    if num ^ -1 == num then
+        return True
+    else
+        return False
+    end
+end
+
+print(Solution(121))

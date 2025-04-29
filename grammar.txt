@@ -22,14 +22,15 @@ function-ret : print_ret LPAREN value RPAREN
              : input LPAREN RPAREN
              : input_int LPAREN RPAREN
              : input_char LPAREN RPAREN
-             : int LPAREN value RPAREN
-             : float LPAREN value RPAREN
-             : str LPAREN value RPAREN
-             : list LPAREN value RPAREN
+             : Number LPAREN value RPAREN
+             : String LPAREN value RPAREN
+             : List LPAREN value RPAREN
              : is_num LPAREN value RPAREN
              : is_str LPAREN value RPAREN
              : is_list LPAREN value RPAREN
              : is_func LPAREN value RPAREN
+             : sorted LPAREN list (True|False) RPAREN
+             : is_in LPAREN (LIST|STRING) (INT|FLOAT|STRING) RPAREN
              : len LPAREN STRING|LIST RPAREN
 
 statements   : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
@@ -44,7 +45,7 @@ expr         : KEYWORD:var IDENTIFIER EQ expr
 
 comp-expr    : not comp-expr
              : arith-expr ((EE|NE|LT|GT|LTE|GTE) arith-expr)*
-             : string ((EE|NE)) string
+             : STRING ((EE|NE)) STRING
 
 arith-expr   : term ((PLUS|MINUS) term)*
 

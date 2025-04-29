@@ -10,6 +10,7 @@ Nytescript is not intended for practical use. Its primary purpose is for fun, ex
 ## Getting Started
 ### Prerequisites
 
+* **Visual Studio Code (Preferrably):** Used because there is an extension at [Nytescript on VSC Marketplace](https://marketplace.visualstudio.com/items?itemName=nnnGitHub.nytescript)
 * **Python 3.12 or higher:** Ensure you have Python installed on your system. You can download it from [Python Downloads](https://www.python.org/downloads/).
 
 ### Installation
@@ -24,7 +25,7 @@ Nytescript is not intended for practical use. Its primary purpose is for fun, ex
     source venv/bin/activate  # On Linux/MacOS
     venv\Scripts\activate  # On Windows
     ```
-3. Run ```shell.py``` from Python without arguments for the shell, and provide the filename of a Nytescript (.ns) file that you want to run as an argument in the ```python shell.py example.ns``` format OR install the CLI from setup files provided and use the CLI universally (same usage as shell.py)
+3. Run ```shell.py``` from Python without arguments for the shell, and provide the filename of a Nytescript (.ns) file that you want to run as an argument in the ```python shell.py example.ns``` format OR install the CLI from setup files provided and use the CLI universally with ```nytescript example.ns```
 
 Notes: No libraries apart from standard library are used
 
@@ -35,7 +36,7 @@ It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by
 
 This is an interpreted programming Language made in Python named Nytescript. It has essential functions such as
 printing, input, conditional statements, definable functions, while and for loops, and the ability to run files and 
-exit the programme. It supports comments in regional currency symbols $, £, #, € and ¥ with a format like Python for single-line comments.
+exit the programme. It supports comments in regional currency symbols £, #, € and ¥ with a format like Python for single-line comments.
 
 Nothing needs to be installed except the ```nytescript.py``` and ```shell.py``` file, preferably Python 3.12 and above.
 

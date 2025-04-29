@@ -65,7 +65,7 @@ def tryimport(module):
 			return __import__(module)
 		except:
 			print(f'Module / Library {module} not found, installing now.')
-			os.system(f'pip3 install {module}')
+			os.system(f'pip install {module}')
 
 #######################################
 # EXTERNAL IMPORTS
@@ -80,7 +80,7 @@ def tryimport(module):
 DIGITS = '0123456789'
 LETTERS = string.ascii_letters
 LETTERS_DIGITS = LETTERS + DIGITS
-VERSION = '0.8.3'
+VERSION = '0.8.4'
 FILE_EXTENSION = '.ns'
 
 #######################################
@@ -210,12 +210,14 @@ KEYWORDS = [
 	'return',   # 14 Function Return Statement
 	'continue', # 15 Continue Statement
 	'break',    # 16 Loop Break Statement
+	'in',       # 17 In Statement
 ]
 
 SYMBOL_TABLE = [
-	'NULL',     # 0 Null Value or None
-	'FALSE',    # 1 False Value or (0)
-	'TRUE',     # 2 True Value or (1)
+	'Null',     # 0 Null Value or (0)
+	'False',    # 1 False Value or (0)
+	'True',     # 2 True Value or (1)
+	'None',     # 3 None Value or (NoneType)
 
 ]
 
@@ -261,7 +263,7 @@ class Lexer:
 		while self.current_char != None:
 			if self.current_char in ' \t':
 				self.advance()
-			elif self.current_char in '#£¥€$':
+			elif self.current_char in '#£¥€':
 				self.skip_comment()
 			elif self.current_char in ';\n':
 				tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
@@ -1490,6 +1492,8 @@ class NoneType(Value):
 	def __repr__(self):
 		return 'NoneType'
 
+NoneType.none = NoneType()
+
 class Number(Value):
 	def __init__(self, value):
 		super().__init__()
@@ -1634,6 +1638,19 @@ class String(Value):
 		else:
 			return None, Value.illegal_operation(self, other)
 
+	def powed_by(self, other):
+		if isinstance(other, Number):
+			try:
+				return String(self.value[::other.value]).set_context(self.context), None
+			except:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'String cannot do slice stepping with this type',
+					self.context
+				)
+		else:
+			return None, Value.illegal_operation(self, other)
+
 	def get_comparison_eq(self, other):
 		if isinstance(other, String):
 			return Number(int(self.value == other.value)).set_context(self.context), None
@@ -1707,6 +1724,19 @@ class List(Value):
 		else:
 			return None, Value.illegal_operation(self, other)
 	
+	def powed_by(self, other):
+		if isinstance(other, Number):
+			try:
+				return List(self.elements[::other.value]).set_context(self.context), None
+			except:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'List cannot do slice stepping with this type',
+					self.context
+				)
+		else:
+			return None, Value.illegal_operation(self, other)
+
 	def copy(self):
 		copy = List(self.elements)
 		copy.set_pos(self.pos_start, self.pos_end)
@@ -1909,7 +1939,7 @@ class BuiltInFunction(BaseFunction):
 		if isinstance(value, List):
 			return RTResult().success(value)
 		try:
-			result = list(str(value))
+			result = list(value.value)
 		except ValueError:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
@@ -1932,6 +1962,41 @@ class BuiltInFunction(BaseFunction):
 	# 		))
 	# execute_type.arg_names = ['value']
 
+	def execute_is_in(self, exec_ctx):
+		iterable = exec_ctx.symbol_table.get("list")
+		item = exec_ctx.symbol_table.get("value")
+		if isinstance(iterable, String):
+			iterable = iterable.value
+			if not isinstance(item, String):
+				return RTResult().failure(RTError(
+					self.pos_start, self.pos_end,
+					"Second Argument should be String",
+					exec_ctx
+				))
+			
+			item = str(item)
+			for i in iterable:
+				if item == i:
+					return RTResult().success(Number.true)
+			return RTResult().success(Number.false)
+
+		elif isinstance(iterable, List):
+			iterable = iterable.elements
+			item = item.value
+			for i in iterable:
+				i = i.value
+				if item == i:
+					return RTResult().success(Number.true)
+			return RTResult().success(Number.false)
+
+		else:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"First Argument is not iterable",
+				exec_ctx
+			))
+	execute_is_in.arg_names = ["list", "value"]
+
 	def execute_is_number(self, exec_ctx):
 		is_number = isinstance(exec_ctx.symbol_table.get("value"), Number)
 		return RTResult().success(Number.true if is_number else Number.false)
@@ -1951,6 +2016,39 @@ class BuiltInFunction(BaseFunction):
 		is_number = isinstance(exec_ctx.symbol_table.get("value"), BaseFunction)
 		return RTResult().success(Number.true if is_number else Number.false)
 	execute_is_function.arg_names = ["value"]
+
+	def execute_sorted(self, exec_ctx):
+		list_ = exec_ctx.symbol_table.get("list")
+		reverse = exec_ctx.symbol_table.get("value")
+
+		if not isinstance(list_, List):
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"First Argument must be list",
+				exec_ctx
+			))
+		if not isinstance(reverse, Number):
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"Second Argument must be Number / Boolean",
+				exec_ctx
+			))
+		ulist = list_.elements
+		ureverse = reverse.value
+		for i in range(len(ulist)):
+			ulist[i] = ulist[i].value
+
+		try:
+			result = sorted(ulist, reverse=ureverse)
+			return RTResult().success(List(result))
+		
+		except Exception as e:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				f"Failed to Sort with error {e}",
+				exec_ctx
+			))
+	execute_sorted.arg_names = ["list", "value"]
 
 	def execute_append(self, exec_ctx):
 		list_ = exec_ctx.symbol_table.get("list")
@@ -2053,6 +2151,8 @@ class BuiltInFunction(BaseFunction):
 		try:
 			with open(fn, "r") as f:
 				script = f.read()
+				if script.strip() == '':
+					return RTResult().success(NoneType())
 		except Exception as e:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
@@ -2083,11 +2183,12 @@ BuiltInFunction.progress      = BuiltInFunction("progress")
 BuiltInFunction.String        = BuiltInFunction("String")
 BuiltInFunction.Number        = BuiltInFunction("Number")
 BuiltInFunction.List          = BuiltInFunction("List")
+BuiltInFunction.is_in         = BuiltInFunction("is_in")
 BuiltInFunction.is_number     = BuiltInFunction("is_number")
 BuiltInFunction.is_string     = BuiltInFunction("is_string")
 BuiltInFunction.is_list       = BuiltInFunction("is_list")
 BuiltInFunction.is_function   = BuiltInFunction("is_function")
-# BuiltInFunction.type          = BuiltInFunction("type")
+BuiltInFunction.sorted        = BuiltInFunction("sorted")
 BuiltInFunction.append        = BuiltInFunction("append")
 BuiltInFunction.pop           = BuiltInFunction("pop")
 BuiltInFunction.extend        = BuiltInFunction("extend")
@@ -2389,6 +2490,7 @@ global_symbol_table = SymbolTable()
 global_symbol_table.set(SYMBOL_TABLE[0], Number.null)
 global_symbol_table.set(SYMBOL_TABLE[1], Number.false)
 global_symbol_table.set(SYMBOL_TABLE[2], Number.true)
+global_symbol_table.set(SYMBOL_TABLE[3], NoneType.none)
 global_symbol_table.set("math_pi", Number.math_PI)
 global_symbol_table.set("math_e", Number.math_E)
 global_symbol_table.set("print", BuiltInFunction.print)
@@ -2401,6 +2503,7 @@ global_symbol_table.set("cls", BuiltInFunction.clear)
 global_symbol_table.set("Number", BuiltInFunction.Number)
 global_symbol_table.set("String", BuiltInFunction.String)
 global_symbol_table.set("List", BuiltInFunction.List)
+global_symbol_table.set("is_in", BuiltInFunction.is_in)
 global_symbol_table.set("is_num", BuiltInFunction.is_number)
 global_symbol_table.set("is_str", BuiltInFunction.is_string)
 global_symbol_table.set("is_list", BuiltInFunction.is_list)
@@ -2411,7 +2514,7 @@ global_symbol_table.set("extend", BuiltInFunction.extend)
 global_symbol_table.set("len", BuiltInFunction.len)
 global_symbol_table.set("run", BuiltInFunction.run)
 global_symbol_table.set("exit", BuiltInFunction.exit)
-# global_symbol_table.set("type", BuiltInFunction.type)
+global_symbol_table.set("sorted", BuiltInFunction.sorted)
 # global_symbol_table.set("progress", BuiltInFunction.progress)
 
 def run(fn, text):
