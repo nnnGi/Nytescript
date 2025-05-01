@@ -11,6 +11,7 @@ Nytescript is not intended for practical use. Its primary purpose is for fun, ex
 ### Prerequisites
 
 * **Visual Studio Code (Preferrably):** Used because there is an extension at [Nytescript on VSC Marketplace](https://marketplace.visualstudio.com/items?itemName=nnnGitHub.nytescript)
+* **Code Runner Extension (On VSCode)** So you can run your Nytescript Files from the Play Button (Only after running setup.py)
 * **Python 3.12 or higher:** Ensure you have Python installed on your system. You can download it from [Python Downloads](https://www.python.org/downloads/).
 
 ### Installation
