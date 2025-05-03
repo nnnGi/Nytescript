@@ -92,3 +92,15 @@ func-def     : KEYWORD:func IDENTIFIER?
                LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
                (ARROW expr)
              | (NEWLINE statements KEYWORD:end)
+
+switch-expr  : KEYWORD:switch expr KEYWORD:then
+               KEYWORD:case IDENTIFIER KEYWORD:then
+               statement
+               (NEWLINE statements KEYWORD:end)
+               (KEYWORD:case IDENTIFIER KEYWORD:then
+                statement
+                (NEWLINE statements KEYWORD:end))
+               (KEYWORD:default IDENTIFIER KEYWORD:then
+                statement
+                (NEWLINE statements KEYWORD:end))
+               KEYWORD:end
