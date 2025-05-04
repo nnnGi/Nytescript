@@ -1400,7 +1400,7 @@ class Parser:
 				if self.current_tok.type != TT_NEWLINE:
 					return res.failure(InvalidSyntaxError(
 						self.current_tok.pos_start, self.current_tok.pos_end,
-						f"Expected NEWLINE after '{KEYWORDS[12]}' for case body"
+						f"Expected NEWLINE after '{KEYWORDS[12]}' for {KEYWORDS[19]} body"
 					))
 
 				res.register_advancement()
