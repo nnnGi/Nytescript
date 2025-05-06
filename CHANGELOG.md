@@ -5,6 +5,7 @@
 - Made shell cursor controllable using the readline module on Unix systems, making it like Windows
 ## Statements
 - Added Switch Statement using keywords ```switch```, ```case``` and ```default``` (Grammar is in  ```grammar.txt```)
+- Added Try-Except Statement using keywords ```try``` and ```except``` (Grammar is in ```grammar.txt```)
 
 # 🐞 Bug Fixes:
 None
