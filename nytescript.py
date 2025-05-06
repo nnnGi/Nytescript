@@ -265,72 +265,74 @@ class Lexer:
 		tokens = []
 
 		while self.current_char != None:
-			if self.current_char in ' \t':
-				self.advance()
-			elif self.current_char in '#£¥€':
-				self.skip_comment()
-			elif self.current_char in ';\n':
-				tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
-				self.advance()
-			elif self.current_char in DIGITS:
-				tokens.append(self.make_number())
-			elif self.current_char in LETTERS:
-				tokens.append(self.make_identifier())
-			elif self.current_char == '\"':
-				tokens.append(self.make_string('\"'))
-			elif self.current_char == '\'':
-				tokens.append(self.make_string('\''))
-			elif self.current_char == '+':
-				tokens.append(Token(TT_PLUS, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == '-':
-				tokens.append(self.make_minus_or_arrow())
-			elif self.current_char == '*':
-				tokens.append(Token(TT_MUL, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == '/':
-				tokens.append(Token(TT_DIV, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == '^':
-				tokens.append(Token(TT_POW, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == '(':
-				tokens.append(Token(TT_LPAREN, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == ')':
-				tokens.append(Token(TT_RPAREN, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == '[':
-				tokens.append(Token(TT_LSQUARE, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == ']':
-				tokens.append(Token(TT_RSQUARE, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == '{':
-				tokens.append(Token(TT_LBRACE, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == '}':
-				tokens.append(Token(TT_RBRACE, pos_start=self.pos))
-				self.advance()
-			elif self.current_char == '!':
-				token, error = self.make_not_equals()
-				if error: return [], error
-				tokens.append(token)
-			elif self.current_char == '=':
-				tokens.append(self.make_equals())
-			elif self.current_char == '<':
-				tokens.append(self.make_less_than())
-			elif self.current_char == '>':
-				tokens.append(self.make_greater_than())
-			elif self.current_char == ',':
-				tokens.append(Token(TT_COMMA, pos_start=self.pos))
-				self.advance()
-			else:
-				pos_start = self.pos.copy()
-				char = self.current_char
-				self.advance()
-				return [], IllegalCharError(pos_start, self.pos, "'" + char + "'")
 
+			match self.current_char:
+				case self.current_char if self.current_char in ' \t':
+					self.advance()
+				case self.current_char if self.current_char in '#£¥€':
+					self.skip_comment()
+				case self.current_char if self.current_char in ';\n':
+					tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
+					self.advance()
+				case self.current_char if self.current_char in DIGITS:
+					tokens.append(self.make_number())
+				case self.current_char if self.current_char in LETTERS:
+					tokens.append(self.make_identifier())
+				case '\"':
+					tokens.append(self.make_string('\"'))
+				case '\'':
+					tokens.append(self.make_string('\''))
+				case '+':
+					tokens.append(Token(TT_PLUS, pos_start=self.pos))
+					self.advance()
+				case '-':
+					tokens.append(self.make_minus_or_arrow())
+				case '*':
+					tokens.append(Token(TT_MUL, pos_start=self.pos))
+					self.advance()
+				case '/':
+					tokens.append(Token(TT_DIV, pos_start=self.pos))
+					self.advance()
+				case '^':
+					tokens.append(Token(TT_POW, pos_start=self.pos))
+					self.advance()
+				case '(':
+					tokens.append(Token(TT_LPAREN, pos_start=self.pos))
+					self.advance()
+				case ')':
+					tokens.append(Token(TT_RPAREN, pos_start=self.pos))
+					self.advance()
+				case '[':
+					tokens.append(Token(TT_LSQUARE, pos_start=self.pos))
+					self.advance()
+				case ']':
+					tokens.append(Token(TT_RSQUARE, pos_start=self.pos))
+					self.advance()
+				case '{':
+					tokens.append(Token(TT_LBRACE, pos_start=self.pos))
+					self.advance()
+				case '}':
+					tokens.append(Token(TT_RBRACE, pos_start=self.pos))
+					self.advance()
+				case '!':
+					token, error = self.make_not_equals()
+					if error: return [], error
+					tokens.append(token)
+				case '=':
+					tokens.append(self.make_equals())
+				case '<':
+					tokens.append(self.make_less_than())
+				case '>':
+					tokens.append(self.make_greater_than())
+				case ',':
+					tokens.append(Token(TT_COMMA, pos_start=self.pos))
+					self.advance()
+				case _:
+					pos_start = self.pos.copy()
+					char = self.current_char
+					self.advance()
+					return [], IllegalCharError(pos_start, self.pos, "'" + char + "'")
+			
 		tokens.append(Token(TT_EOF, pos_start=self.pos))
 		return tokens, None
 
