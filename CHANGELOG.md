@@ -11,6 +11,7 @@
 
 ## Functions
 - Added ```strcon()``` function which takes in a list to string concatenate
+- Added ```sys_eval()``` function which is like ```os.system()```
 
 ## Lexer
 - Rewrote Tokeniser with  ```match ... case ...``` format
