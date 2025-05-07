@@ -2196,6 +2196,26 @@ class BuiltInFunction(BaseFunction):
 		return RTResult().success(NoneType())
 	execute_exit.arg_names = []
 
+	def execute_sys_eval(self, exec_ctx):
+		command = exec_ctx.symbol_table.get('value')
+		if not isinstance(command, String):
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"Argument passed into function was not String",
+				exec_ctx
+			))
+		
+		try:
+			os.system(command.value)
+		except:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"Failed to execute script",
+				exec_ctx
+			))
+		
+		return RTResult().success(NoneType())
+
 	def execute_Number(self, exec_ctx):
 		data = exec_ctx.symbol_table.get('value')
 		ttype = type(data)
@@ -2480,6 +2500,7 @@ BuiltInFunction.String        = BuiltInFunction("String")
 BuiltInFunction.Number        = BuiltInFunction("Number")
 BuiltInFunction.List          = BuiltInFunction("List")
 BuiltInFunction.strcon        = BuiltInFunction("strcon")
+BuiltInFunction.sys_eval      = BuiltInFunction("sys_eval")
 BuiltInFunction.is_in         = BuiltInFunction("is_in")
 BuiltInFunction.is_number     = BuiltInFunction("is_number")
 BuiltInFunction.is_string     = BuiltInFunction("is_string")
@@ -2853,6 +2874,7 @@ global_symbol_table.set("Number", BuiltInFunction.Number)
 global_symbol_table.set("String", BuiltInFunction.String)
 global_symbol_table.set("List", BuiltInFunction.List)
 global_symbol_table.set("strcon", BuiltInFunction.strcon)
+global_symbol_table.set("sys_eval", BuiltInFunction.sys_eval)
 global_symbol_table.set("is_in", BuiltInFunction.is_in)
 global_symbol_table.set("is_num", BuiltInFunction.is_number)
 global_symbol_table.set("is_str", BuiltInFunction.is_string)
