@@ -31,13 +31,13 @@ Nytescript is not intended for practical use. Its primary purpose is for fun, ex
 Notes: No libraries apart from standard library are used
 
 # Further Information
-Nytescript Esolang, written by @\_nnn_ (A.K.A @FlyBoyAce2) in Python 3.12.9 and 3.13.2	
+Nytescript Esolang, written by @\_nnn_ (A.K.A @FlyBoyAce2) in Python 3.12.9 and 3.13.2 and 3.13.3	
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 
 This is an interpreted programming Language made in Python named Nytescript. It has essential functions such as
-printing, input, conditional statements, definable functions, while and for loops, and the ability to run files and 
-exit the programme. It supports comments in regional currency symbols £, #, € and ¥ with a format like Python for single-line comments.
+printing, input, conditional statements, definable functions, while and for loops, switch and try-except statements, and the ability to run files and 
+exit the programme.
 
 Nothing needs to be installed except the ```nytescript.py``` and ```shell.py``` file, preferably Python 3.12 and above.
 
