@@ -40,6 +40,8 @@ statements   : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 statement		 : KEYWORD:return expr?
 						 : KEYWORD:continue
 						 : KEYWORD:break
+             : KEYWORD:import FILENAME
+             : FILENAME.expr
 						 : expr
 
 expr         : KEYWORD:var IDENTIFIER EQ expr
