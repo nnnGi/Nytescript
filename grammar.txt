@@ -17,6 +17,7 @@ function_std : print LPAREN value RPAREN -> STDOUT
              : append LPAREN LIST, value: item RPAREN -> LIST
              : pop LPAREN LIST, value: index RPAREN -> LIST
              : extend LPAREN LISTa, LISTb RPAREN -> LISTa
+             : sys_eval LPAREN string RPAREN -> CMD LINE INTERFACE
 
 function-ret : print_ret LPAREN value RPAREN
              : input LPAREN RPAREN
@@ -32,12 +33,15 @@ function-ret : print_ret LPAREN value RPAREN
              : sorted LPAREN list (True|False) RPAREN
              : is_in LPAREN (LIST|STRING) (INT|FLOAT|STRING) RPAREN
              : len LPAREN STRING|LIST RPAREN
+             : strcon LPAREN LIST RPAREN
 
 statements   : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
 statement		 : KEYWORD:return expr?
 						 : KEYWORD:continue
 						 : KEYWORD:break
+             : KEYWORD:import FILENAME
+             : FILENAME.expr
 						 : expr
 
 expr         : KEYWORD:var IDENTIFIER EQ expr
@@ -92,3 +96,26 @@ func-def     : KEYWORD:func IDENTIFIER?
                LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
                (ARROW expr)
              | (NEWLINE statements KEYWORD:end)
+
+switch-expr  : KEYWORD:switch expr KEYWORD:then
+               KEYWORD:case IDENTIFIER KEYWORD:then
+               statement
+               (NEWLINE statements NEWLINE)
+               KEYWORD:end
+               (KEYWORD:case IDENTIFIER KEYWORD:then
+                statement
+                (NEWLINE statements NEWLINE)
+               KEYWORD:end)
+               (KEYWORD:default IDENTIFIER KEYWORD:then
+                statement
+                (NEWLINE statements NEWLINE)
+                KEYWORD:end)
+               KEYWORD:end
+
+try-expr     : KEYWORD:try
+               statement
+               (NEWLINE statements NEWLINE)
+               KEYWORD:end KEYWORD:except
+               statement
+               (NEWLINE statements NEWLINE)
+               KEYWORD:end
