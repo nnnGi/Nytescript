@@ -191,6 +191,7 @@ TT_COMMA        = 'COMMA'
 TT_ARROW        = 'ARROW'
 TT_NEWLINE      = 'NEWLINE'
 TT_EOF          = 'EOF'
+TT_DOT          = 'DOT'
 
 KEYWORDS = [
 	'var',      # 0 Variable Declaration Statement
@@ -216,6 +217,7 @@ KEYWORDS = [
 	'default',  # 20 Default Clause
 	'try',      # 21 Try Clause
 	'except',   # 22 Except Clause
+	'import',   # 23 Import Statement
 ]
 
 SYMBOL_TABLE = [
@@ -327,12 +329,15 @@ class Lexer:
 				case ',':
 					tokens.append(Token(TT_COMMA, pos_start=self.pos))
 					self.advance()
+				case '.': # Added dot token
+					tokens.append(Token(TT_DOT, pos_start=self.pos))
+					self.advance()
 				case _:
 					pos_start = self.pos.copy()
 					char = self.current_char
 					self.advance()
 					return [], IllegalCharError(pos_start, self.pos, "'" + char + "'")
-			
+
 		tokens.append(Token(TT_EOF, pos_start=self.pos))
 		return tokens, None
 
@@ -617,6 +622,20 @@ class TryExceptNode:
 		self.pos_start = self.try_body_node.pos_start
 		self.pos_end = self.except_body_node.pos_end
 
+class ImportNode: # Added Import Node
+	def __init__(self, module_name_tok):
+		self.module_name_tok = module_name_tok
+
+		self.pos_start = self.module_name_tok.pos_start
+		self.pos_end = self.module_name_tok.pos_end
+
+class MemberAccessNode: # Added Member Access Node for dot notation
+	def __init__(self, object_node, member_name_tok):
+		self.object_node = object_node
+		self.member_name_tok = member_name_tok
+
+		self.pos_start = self.object_node.pos_start
+		self.pos_end = self.member_name_tok.pos_end
 
 #######################################
 # PARSE RESULT
@@ -754,19 +773,50 @@ class Parser:
 			self.advance()
 			return res.success(BreakNode(pos_start, self.current_tok.pos_start.copy()))
 
-		# Add check for 'try' keyword and call try_except_expr
-		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[21]): # KEYWORDS[21] is 'try'
+		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[21]):
 			try_except_node = res.register(self.try_except_expr())
 			if res.error: return res
 			return res.success(try_except_node)
+
+		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[23]):
+			import_node = res.register(self.import_expr())
+			if res.error: return res
+			return res.success(import_node)
+
 
 		expr = res.register(self.expr())
 		if res.error:
 			return res.failure(InvalidSyntaxError(
 				self.current_tok.pos_start, self.current_tok.pos_end,
-				f"Expected '{KEYWORDS[14]}', '{KEYWORDS[15]}', '{KEYWORDS[16]}', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
+				f"Expected '{KEYWORDS[14]}', '{KEYWORDS[15]}', '{KEYWORDS[16]}', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', '{KEYWORDS[23]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
 			))
 		return res.success(expr)
+
+	def import_expr(self):
+		res = ParseResult()
+		pos_start = self.current_tok.pos_start.copy()
+
+		if not self.current_tok.matches(TT_KEYWORD, KEYWORDS[23]):
+			return res.failure(InvalidSyntaxError(
+				self.current_tok.pos_start, self.current_tok.pos_end,
+				f"Expected '{KEYWORDS[23]}'"
+			))
+
+		res.register_advancement()
+		self.advance()
+
+		if self.current_tok.type != TT_IDENTIFIER:
+			return res.failure(InvalidSyntaxError(
+				self.current_tok.pos_start, self.current_tok.pos_end,
+				f"Expected identifier after '{KEYWORDS[23]}'"
+			))
+
+		module_name_tok = self.current_tok
+		res.register_advancement()
+		self.advance()
+
+		return res.success(ImportNode(module_name_tok))
+
 
 	def expr(self):
 		res = ParseResult()
@@ -797,12 +847,12 @@ class Parser:
 			if res.error: return res
 			return res.success(VarAssignNode(var_name, expr))
 
-		node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD, KEYWORDS[1]), (TT_KEYWORD, KEYWORDS[2]))))
+		node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD, KEYWORDS[1]), (TT_KEYWORD, KEYWORDS[2])))) # and, or
 
 		if res.error:
 			return res.failure(InvalidSyntaxError(
 				self.current_tok.pos_start, self.current_tok.pos_end,
-				f"Expected '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
+				f"Expected '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', '{KEYWORDS[23]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
 			))
 
 		return res.success(node)
@@ -824,7 +874,7 @@ class Parser:
 		if res.error:
 			return res.failure(InvalidSyntaxError(
 				self.current_tok.pos_start, self.current_tok.pos_end,
-				f"Expected int, float, identifier, '+', '-', '(', '[', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}' or '{KEYWORDS[3]}'"
+				f"Expected int, float, identifier, '+', '-', '(', '[', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', '{KEYWORDS[23]}' or '{KEYWORDS[3]}'"
 			))
 
 		return res.success(node)
@@ -853,7 +903,7 @@ class Parser:
 
 	def call(self):
 		res = ParseResult()
-		atom = res.register(self.atom())
+		atom = res.register(self.member_access())
 		if res.error: return res
 
 		if self.current_tok.type == TT_LPAREN:
@@ -869,7 +919,7 @@ class Parser:
 				if res.error:
 					return res.failure(InvalidSyntaxError(
 						self.current_tok.pos_start, self.current_tok.pos_end,
-						f"Expected ')', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
+						f"Expected ')', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', '{KEYWORDS[23]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
 					))
 
 				while self.current_tok.type == TT_COMMA:
@@ -889,6 +939,30 @@ class Parser:
 				self.advance()
 			return res.success(CallNode(atom, arg_nodes))
 		return res.success(atom)
+
+	def member_access(self):
+		res = ParseResult()
+		node = res.register(self.atom())
+		if res.error: return res
+
+		while self.current_tok.type == TT_DOT:
+			res.register_advancement()
+			self.advance()
+
+			if self.current_tok.type != TT_IDENTIFIER:
+				return res.failure(InvalidSyntaxError(
+					self.current_tok.pos_start, self.current_tok.pos_end,
+					"Expected identifier after '.'"
+				))
+
+			member_name_tok = self.current_tok
+			res.register_advancement()
+			self.advance()
+
+			node = MemberAccessNode(node, member_name_tok)
+
+		return res.success(node)
+
 
 	def atom(self):
 		res = ParseResult()
@@ -954,16 +1028,14 @@ class Parser:
 			if res.error: return res
 			return res.success(switch_expr)
 
-		# Add check for 'try' keyword and call try_except_expr
-		elif tok.matches(TT_KEYWORD, KEYWORDS[21]): # KEYWORDS[21] is 'try'
+		elif tok.matches(TT_KEYWORD, KEYWORDS[21]):
 			try_except_node = res.register(self.try_except_expr())
 			if res.error: return res
 			return res.success(try_except_node)
 
-
 		return res.failure(InvalidSyntaxError(
 			tok.pos_start, tok.pos_end,
-			f"Expected int, float, identifier, '+', '-', '(', '[', '{KEYWORDS[0]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}'"
+			f"Expected int, float, identifier, '+', '-', '(', '[', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}'"
 		))
 
 	def list_expr(self):
@@ -988,7 +1060,7 @@ class Parser:
 			if res.error:
 				return res.failure(InvalidSyntaxError(
 					self.current_tok.pos_start, self.current_tok.pos_end,
-					f"Expected ']', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
+					f"Expected ']', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', '{KEYWORDS[23]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
 				))
 
 			while self.current_tok.type == TT_COMMA:
@@ -1755,6 +1827,9 @@ class Value:
 	def execute(self, args):
 		return RTResult().failure(self.illegal_operation())
 
+	def get_member(self, name): # Added get_member method
+		return None, self.illegal_operation()
+
 	def copy(self):
 		raise Exception('No copy method defined')
 
@@ -2204,7 +2279,7 @@ class BuiltInFunction(BaseFunction):
 				"Argument passed into function was not String",
 				exec_ctx
 			))
-		
+
 		try:
 			os.system(command.value)
 		except:
@@ -2213,8 +2288,9 @@ class BuiltInFunction(BaseFunction):
 				"Failed to execute script",
 				exec_ctx
 			))
-		
+
 		return RTResult().success(NoneType())
+	execute_sys_eval.arg_names = ['value']
 
 	def execute_Number(self, exec_ctx):
 		data = exec_ctx.symbol_table.get('value')
@@ -2457,7 +2533,7 @@ class BuiltInFunction(BaseFunction):
 			))
 
 		fn = fn.value
-		if not FILE_EXTENSION in fn:
+		if not fn.endswith(FILE_EXTENSION):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
 				f"File Extension should be {FILE_EXTENSION}",
@@ -2475,7 +2551,8 @@ class BuiltInFunction(BaseFunction):
 				exec_ctx
 			))
 
-		_, error = run(fn, script)
+		# Use the main run function for running the imported script
+		_, error = run(fn, script, new_context=True)
 
 		if error:
 			return RTResult().failure(RTError(
@@ -2515,6 +2592,35 @@ BuiltInFunction.run			  = BuiltInFunction("run")
 BuiltInFunction.exit          = BuiltInFunction("exit")
 # BuiltInFunction.progress      = BuiltInFunction("progress")
 
+class ModuleValue(Value):
+	def __init__(self, name, symbol_table):
+		super().__init__()
+		self.name = name
+		self.symbol_table = symbol_table
+
+	def get_member(self, name):
+		value = self.symbol_table.get(name)
+		if value is None:
+			return None, RTError(
+				self.pos_start, self.pos_end,
+				f"Member '{name}' not found in module '{self.name}'",
+				self.context
+			)
+		return value.copy().set_pos(self.pos_start, self.pos_end).set_context(self.context), None
+
+	def copy(self):
+		copy = ModuleValue(self.name, self.symbol_table)
+		copy.set_pos(self.pos_start, self.pos_end)
+		copy.set_context(self.context)
+		return copy
+
+	def __str__(self):
+		return f"<Module {self.name}>"
+
+	def __repr__(self):
+		return f"<Module {self.name}>"
+
+
 #######################################
 # CONTEXT
 #######################################
@@ -2545,7 +2651,10 @@ class SymbolTable:
 		self.symbols[name] = value
 
 	def remove(self, name):
-		del self.symbols[name]
+		if name in self.symbols:
+			del self.symbols[name]
+		elif self.parent:
+			self.parent.remove(name)
 
 #######################################
 # INTERPRETER
@@ -2851,6 +2960,70 @@ class Interpreter:
 
 		return res.success(try_result.value)
 
+	def visit_ImportNode(self, node, context):
+		res = RTResult()
+		module_name = node.module_name_tok.value
+		filename = f"{module_name}{FILE_EXTENSION}"
+
+		current_ctx = context
+		while current_ctx:
+			if current_ctx.symbol_table and current_ctx.symbol_table.get(module_name) is not None:
+				return res.success(current_ctx.symbol_table.get(module_name))
+			current_ctx = current_ctx.parent
+
+
+		try:
+			with open(filename, "r") as f:
+				script = f.read()
+		except FileNotFoundError:
+			return res.failure(RTError(
+				node.pos_start, node.pos_end,
+				f"Module '{module_name}' not found. File '{filename}' does not exist.",
+				context
+			))
+		except Exception as e:
+			return res.failure(RTError(
+				node.pos_start, node.pos_end,
+				f"Failed to read module file '{filename}': {e}",
+				context
+			))
+
+		module_context = Context(f"<module {module_name}>", context, node.pos_start)
+		module_context.symbol_table = SymbolTable(global_symbol_table)
+		module_result_value, module_error = run(filename, script, context=module_context)
+
+		if module_error:
+			return res.failure(RTError(
+				node.pos_start, node.pos_end,
+				f"Error importing module '{module_name}':\n{module_error.as_string()}",
+				context
+			))
+
+		module_value = ModuleValue(module_name, module_context.symbol_table).set_context(context).set_pos(node.pos_start, node.pos_end)
+
+		context.symbol_table.set(module_name, module_value)
+
+		return res.success(module_value)
+
+	def visit_MemberAccessNode(self, node, context):
+		res = RTResult()
+		object_value = res.register(self.visit(node.object_node, context))
+		if res.should_return(): return res
+
+		member_name = node.member_name_tok.value
+
+		if not hasattr(object_value, 'get_member') or not callable(object_value.get_member):
+			return res.failure(RTError(
+				node.object_node.pos_start, node.object_node.pos_end,
+				f"'{type(object_value).__name__}' object has no attribute or member access",
+				context
+			))
+
+		member_value, error = object_value.get_member(member_name)
+		if error: return res.failure(error)
+
+		return res.success(member_value.set_pos(node.pos_start, node.pos_end).set_context(context))
+
 
 #######################################
 # RUN
@@ -2888,7 +3061,9 @@ global_symbol_table.set("run", BuiltInFunction.run)
 global_symbol_table.set("exit", BuiltInFunction.exit)
 global_symbol_table.set("sorted", BuiltInFunction.sorted)
 
-def run(fn, text):
+imported_modules = {}
+
+def run(fn, text, context=None, new_context=False):
 
 	# Generate Tokens
 	lexer = Lexer(fn, text)
@@ -2902,8 +3077,14 @@ def run(fn, text):
 
 	# Run Nytescript
 	interpreter = Interpreter()
-	context = Context('<program>')
-	context.symbol_table = global_symbol_table
+	if context is None:
+		context = Context('<program>')
+		context.symbol_table = global_symbol_table
+	elif new_context:
+		context = Context('<module>', context, None)
+		context.symbol_table = SymbolTable(context.parent.symbol_table)
+
+
 	result = interpreter.visit(ast.node, context)
 
 	return result.value, result.error
