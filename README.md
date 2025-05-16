@@ -31,7 +31,7 @@ Nytescript is not intended for practical use. Its primary purpose is for fun, ex
 Notes: No libraries apart from standard library are used
 
 # Further Information
-Nytescript Esolang, written by @\_nnn_ (A.K.A @FlyBoyAce2) in Python 3.12.9 and 3.13.2 and 3.13.3	
+Nytescript Esolang, written by @\_nnn_ in Python 3.12.9 and 3.13.2 and 3.13.3	
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 
