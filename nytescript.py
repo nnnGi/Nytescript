@@ -11,7 +11,7 @@ It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by
 
 This is an esoteric interpreted programming Language made in Python named Nytescript. It has essential functions such as
 printing, input, conditional statements, definable functions, while and for loops, and the ability to run files and
-exit the programme. It supports comments in regional currency symbols $, £, #, € and ¥ with a format like Python for single line comments.
+exit the programme. It supports comments in regional currency symbols £, #, € and ¥ with a format like Python for single line comments.
 
 Nothing needs to be installed except the 'nytescript.py' file, preferably Python 3.12 and above.
 
@@ -80,7 +80,7 @@ def tryimport(module):
 DIGITS = '0123456789'
 LETTERS = string.ascii_letters
 LETTERS_DIGITS = LETTERS + DIGITS
-VERSION = '0.8.5'
+VERSION = '0.8.6'
 FILE_EXTENSION = '.ns'
 
 #######################################
@@ -174,6 +174,8 @@ TT_MINUS       	= 'MINUS'
 TT_MUL         	= 'MUL'
 TT_DIV         	= 'DIV'
 TT_POW          = 'POW'
+TT_FDIV         = 'FDIV'
+TT_PERCENT      = 'PERCENT'
 TT_EQ           = 'EQ'
 TT_LPAREN     	= 'LPAREN'
 TT_RPAREN     	= 'RPAREN'
@@ -293,10 +295,12 @@ class Lexer:
 					tokens.append(Token(TT_MUL, pos_start=self.pos))
 					self.advance()
 				case '/':
-					tokens.append(Token(TT_DIV, pos_start=self.pos))
-					self.advance()
+					tokens.append(self.make_div_or_fdiv())
 				case '^':
 					tokens.append(Token(TT_POW, pos_start=self.pos))
+					self.advance()
+				case '%':
+					tokens.append(Token(TT_PERCENT, pos_start=self.pos))
 					self.advance()
 				case '(':
 					tokens.append(Token(TT_LPAREN, pos_start=self.pos))
@@ -329,7 +333,7 @@ class Lexer:
 				case ',':
 					tokens.append(Token(TT_COMMA, pos_start=self.pos))
 					self.advance()
-				case '.': # Added dot token
+				case '.':
 					tokens.append(Token(TT_DOT, pos_start=self.pos))
 					self.advance()
 				case _:
@@ -407,6 +411,17 @@ class Lexer:
 		if self.current_char == '>':
 			self.advance()
 			tok_type = TT_ARROW
+
+		return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
+
+	def make_div_or_fdiv(self):
+		tok_type = TT_DIV
+		pos_start = self.pos.copy()
+		self.advance()
+
+		if self.current_char == '/':
+			self.advance()
+			tok_type = TT_FDIV
 
 		return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
@@ -622,14 +637,14 @@ class TryExceptNode:
 		self.pos_start = self.try_body_node.pos_start
 		self.pos_end = self.except_body_node.pos_end
 
-class ImportNode: # Added Import Node
+class ImportNode:
 	def __init__(self, module_name_tok):
 		self.module_name_tok = module_name_tok
 
 		self.pos_start = self.module_name_tok.pos_start
 		self.pos_end = self.module_name_tok.pos_end
 
-class MemberAccessNode: # Added Member Access Node for dot notation
+class MemberAccessNode:
 	def __init__(self, object_node, member_name_tok):
 		self.object_node = object_node
 		self.member_name_tok = member_name_tok
@@ -883,7 +898,7 @@ class Parser:
 		return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
 
 	def term(self):
-		return self.bin_op(self.factor, (TT_MUL, TT_DIV))
+		return self.bin_op(self.factor, (TT_MUL, TT_DIV, TT_FDIV, TT_PERCENT))
 
 	def factor(self):
 		res = ParseResult()
@@ -1796,6 +1811,12 @@ class Value:
 
 	def powed_by(self, other):
 		return None, self.illegal_operation(other)
+	
+	def percent_by(self, other):
+		return None, self.illegal_operation(other)
+	
+	def fdiv_by(self, other):
+		return None, self.illegal_operation(other)
 
 	def get_comparison_eq(self, other):
 		return None, self.illegal_operation(other)
@@ -1827,7 +1848,7 @@ class Value:
 	def execute(self, args):
 		return RTResult().failure(self.illegal_operation())
 
-	def get_member(self, name): # Added get_member method
+	def get_member(self, name):
 		return None, self.illegal_operation()
 
 	def copy(self):
@@ -1901,6 +1922,18 @@ class Number(Value):
 	def powed_by(self, other):
 		if isinstance(other, Number):
 			return Number(self.value ** other.value).set_context(self.context), None
+		else:
+			return None, Value.illegal_operation(self, other)
+	
+	def fdiv_by(self, other):
+		if isinstance(other, Number):
+			return Number(self.value // other.value).set_context(self.context), None
+		else:
+			return None, Value.illegal_operation(self, other)
+
+	def percent_by(self, other):
+		if isinstance(other, Number):
+			return Number(self.value % other.value).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
@@ -2129,6 +2162,9 @@ class BaseFunction(Value):
 
 	def check_args(self, arg_names, args):
 		res = RTResult()
+
+		if len(args) == 0:
+			return res.success(NoneType())
 
 		if len(args) > len(arg_names):
 			return res.failure(RTError(
@@ -2723,7 +2759,7 @@ class Interpreter:
 		if res.should_return(): return res
 		right = res.register(self.visit(node.right_node, context))
 		if res.should_return(): return res
-
+		
 		if node.op_tok.type == TT_PLUS:
 			result, error = left.added_to(right)
 		elif node.op_tok.type == TT_MINUS:
@@ -2734,6 +2770,10 @@ class Interpreter:
 			result, error = left.dived_by(right)
 		elif node.op_tok.type == TT_POW:
 			result, error = left.powed_by(right)
+		elif node.op_tok.type == TT_PERCENT:
+			result, error = left.percent_by(right)
+		elif node.op_tok.type == TT_FDIV:
+			result, error = left.fdiv_by(right)
 		elif node.op_tok.type == TT_EE:
 			result, error = left.get_comparison_eq(right)
 		elif node.op_tok.type == TT_NE:
