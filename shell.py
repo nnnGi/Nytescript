@@ -1,12 +1,4 @@
 '''
-Libraries / Modules Pre Installed:
-	- os
-	- sys
-	- math
-	- string
-	- readline
-	- atexit
-
 Nytescript Esolang, written by @_nnn_ (A.K.A @FlyBoyAce2) in Python 3.12.9 and 3.13.2 and 3.13.3	
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
