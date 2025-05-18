@@ -8,7 +8,10 @@
 - Added Pass Statement (No-Op)
 
 ## Speed + Memory
-- Decorated Program runner with Least Recently Used Cache from ```functools``` ```lru_cache```
+- Decorated with Least Recently Used Cache from ```functools``` ```lru_cache```:
+  - Nytescript Shell
+  - Nytescript File Intepreter
+  - Nytescript Script Runner
 
 # 🐞 Bug Fixes:
 None
