@@ -12,6 +12,9 @@
   - Nytescript Shell
   - Nytescript File Intepreter
   - Nytescript Script Runner
+ 
+## Internal Errors
+- Error Messages for Runtime Error (RTError) have the strings with arrows function inside the object itself
 
 # 🐞 Bug Fixes:
 None
