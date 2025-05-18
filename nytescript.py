@@ -23,39 +23,13 @@ Nothing needs to be installed except the 'nytescript.py' file, preferably Python
 #######################################
 
 import string
-import os, sys, math
-import time
+import os, sys, math, time
+from functools import lru_cache
+import collections
 
 #######################################
 # EXTERNAL FUNCTIONS
 #######################################
-
-def string_with_arrows(text, pos_start, pos_end):
-		result = ''
-
-		# Calculate indices
-		idx_start = max(text.rfind('\n', 0, pos_start.idx), 0)
-		idx_end = text.find('\n', idx_start + 1)
-		if idx_end < 0: idx_end = len(text)
-
-		# Generate each line
-		line_count = pos_end.ln - pos_start.ln + 1
-		for i in range(line_count):
-				# Calculate line columns
-				line = text[idx_start:idx_end]
-				col_start = pos_start.col if i == 0 else 0
-				col_end = pos_end.col if i == line_count - 1 else len(line) - 1
-
-				# Append to result
-				result += line + '\n'
-				result += ' ' * col_start + '^' * (col_end - col_start)
-
-				# Re-calculate indices
-				idx_start = idx_end
-				idx_end = text.find('\n', idx_start + 1)
-				if idx_end < 0: idx_end = len(text)
-
-		return result.replace('\t', '')
 
 def tryimport(module):
 	if type(module) != str:
@@ -66,12 +40,6 @@ def tryimport(module):
 		except:
 			print(f'Module / Library {module} not found, installing now.')
 			os.system(f'pip install {module}')
-
-#######################################
-# EXTERNAL IMPORTS
-#######################################
-
-#tqdm = tryimport('tqdm')
 
 #######################################
 # CONSTANTS
@@ -97,8 +65,35 @@ class Error:
 	def as_string(self):
 		result    = f'{self.error_name}: {self.details}\n'
 		result += f'File {self.pos_start.fn}, line {self.pos_start.ln + 1}'
-		result += '\n\n' + string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end)
+		result += '\n\n' + self.string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end)
 		return result
+
+	def string_with_arrows(self, text, pos_start, pos_end):
+		result = ''
+
+		# Calculate indices
+		idx_start = max(text.rfind('\n', 0, pos_start.idx), 0)
+		idx_end = text.find('\n', idx_start + 1)
+		if idx_end < 0: idx_end = len(text)
+
+		# Generate each line
+		line_count = pos_end.ln - pos_start.ln + 1
+		for i in range(line_count):
+			# Calculate line columns
+			line = text[idx_start:idx_end]
+			col_start = pos_start.col if i == 0 else 0
+			col_end = pos_end.col if i == line_count - 1 else len(line) - 1
+
+			# Append to result
+			result += line + '\n'
+			result += ' ' * col_start + '^' * (col_end - col_start)
+
+			# Re-calculate indices
+			idx_start = idx_end
+			idx_end = text.find('\n', idx_start + 1)
+			if idx_end < 0: idx_end = len(text)
+
+		return result.replace('\t', '')
 
 class IllegalCharError(Error):
 	def __init__(self, pos_start, pos_end, details):
@@ -120,7 +115,7 @@ class RTError(Error):
 	def as_string(self):
 		result    = self.generate_traceback()
 		result += f'{self.error_name}: {self.details}'
-		result += '\n\n' + string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end)
+		result += '\n\n' + self.string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end)
 		return result
 
 	def generate_traceback(self):
@@ -220,6 +215,7 @@ KEYWORDS = [
 	'try',      # 21 Try Clause
 	'except',   # 22 Except Clause
 	'import',   # 23 Import Statement
+	'pass',     # 24 Pass Statement (No-Op)
 ]
 
 SYMBOL_TABLE = [
@@ -286,6 +282,8 @@ class Lexer:
 					tokens.append(self.make_string('\"'))
 				case '\'':
 					tokens.append(self.make_string('\''))
+				case '`':
+					tokens.append(self.make_fstring('`'))
 				case '+':
 					tokens.append(Token(TT_PLUS, pos_start=self.pos))
 					self.advance()
@@ -386,6 +384,56 @@ class Lexer:
 					continue
 				else:
 					string += self.current_char
+			self.advance()
+			escape_character = False
+
+		self.advance()
+		return Token(TT_STRING, string, pos_start, self.pos)
+
+	def make_fstring(self, string_char):
+		string = ''
+		pos_start = self.pos.copy()
+		escape_character = False
+		self.advance()
+
+		escape_characters = {
+			'n': '\n',
+			't': '\t',
+			'r': '\r'
+		}
+
+		while self.current_char and (self.current_char != string_char or escape_character):
+			if escape_character:
+				string += escape_characters.get(self.current_char, self.current_char)
+			else:
+				if self.current_char == '\\':
+					escape_character = True
+					self.advance()
+					continue
+				elif self.current_char == '$':
+					self.advance()
+					if self.current_char == '{':
+						self.advance()
+						chars = ''
+						while self.current_char != '}':
+							chars += self.current_char
+							self.advance()
+						
+						try:
+							result, error = run('<program>', chars)
+						except:
+							error = True
+						if error:
+							return Token(TT_STRING, '', pos_start, self.pos)
+						string += str(result)
+						
+					else:
+						string += '$'
+						continue
+
+				else:
+					string += self.current_char
+
 			self.advance()
 			escape_character = False
 
@@ -637,6 +685,11 @@ class TryExceptNode:
 		self.pos_start = self.try_body_node.pos_start
 		self.pos_end = self.except_body_node.pos_end
 
+class PassNode:
+	def __init__(self, pos_start, pos_end):
+		self.pos_start = pos_start
+		self.pos_end = pos_end
+
 class ImportNode:
 	def __init__(self, module_name_tok):
 		self.module_name_tok = module_name_tok
@@ -693,7 +746,7 @@ class ParseResult:
 		return self
 
 #######################################
-# PARSER
+# PARSER -> AST
 #######################################
 
 class Parser:
@@ -787,6 +840,11 @@ class Parser:
 			res.register_advancement()
 			self.advance()
 			return res.success(BreakNode(pos_start, self.current_tok.pos_start.copy()))
+		
+		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[24]):
+			res.register_advancement()
+			self.advance()
+			return res.success(PassNode(pos_start, self.current_tok.pos_start.copy()))
 
 		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[21]):
 			try_except_node = res.register(self.try_except_expr())
@@ -798,12 +856,11 @@ class Parser:
 			if res.error: return res
 			return res.success(import_node)
 
-
 		expr = res.register(self.expr())
 		if res.error:
 			return res.failure(InvalidSyntaxError(
 				self.current_tok.pos_start, self.current_tok.pos_end,
-				f"Expected '{KEYWORDS[14]}', '{KEYWORDS[15]}', '{KEYWORDS[16]}', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', '{KEYWORDS[23]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
+				f"Expected '{KEYWORDS[14]}', '{KEYWORDS[15]}', '{KEYWORDS[16]}', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', '{KEYWORDS[23]}', '{KEYWORDS[24]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
 			))
 		return res.success(expr)
 
@@ -862,7 +919,7 @@ class Parser:
 			if res.error: return res
 			return res.success(VarAssignNode(var_name, expr))
 
-		node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD, KEYWORDS[1]), (TT_KEYWORD, KEYWORDS[2])))) # and, or
+		node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD, KEYWORDS[1]), (TT_KEYWORD, KEYWORDS[2]))))
 
 		if res.error:
 			return res.failure(InvalidSyntaxError(
@@ -1876,10 +1933,10 @@ class NoneType(Value):
 		return copy
 
 	def __str__(self):
-		return 'NoneType'
+		return 'None'
 
 	def __repr__(self):
-		return 'NoneType'
+		return 'None'
 
 NoneType.none = NoneType()
 
@@ -2195,6 +2252,53 @@ class BaseFunction(Value):
 		if res.should_return(): return res
 		self.populate_args(arg_names, args, exec_ctx)
 		return res.success(None)
+
+class CachedFunction(BaseFunction):
+	def __init__(self, func, max_size=128):
+		super().__init__(func.name)
+		self.func = func
+		self.max_size = max_size
+		self.cache = collections.OrderedDict()
+
+	def execute(self, args):
+		res = RTResult()
+		try:
+			cache_key = tuple(str(arg) for arg in args)
+		except Exception as e:
+			return res.failure(RTError(
+				self.pos_start, self.pos_end,
+				f"Failed to generate cache key from arguments: {e}",
+				self.context
+			))
+		if cache_key in self.cache:
+			result = self.cache[cache_key]
+			self.cache.move_to_end(cache_key)
+			return res.success(result.copy().set_pos(self.pos_start, self.pos_end).set_context(self.context))
+
+		result = res.register(self.func.execute(args))
+		if res.should_return():
+			return res
+
+		if len(self.cache) >= self.max_size:
+			try:
+				self.cache.popitem(last=False)
+			except KeyError:
+				pass
+
+		self.cache[cache_key] = result.copy().set_pos(self.pos_start, self.pos_end).set_context(self.context)
+		return res.success(result.copy().set_pos(self.pos_start, self.pos_end).set_context(self.context))
+
+
+	def copy(self):
+		copy = CachedFunction(self.func, self.max_size)
+		copy.cache = self.cache
+		copy.lru_list = self.cache
+		copy.set_context(self.context)
+		copy.set_pos(self.pos_start, self.pos_end)
+		return copy
+
+	def __repr__(self):
+		return f"<Cached Function {self.name} (max_size={self.max_size})>"
 
 class Function(BaseFunction):
 	def __init__(self, name, body_node, arg_names, should_auto_return):
@@ -2949,6 +3053,9 @@ class Interpreter:
 
 	def visit_BreakNode(self, node, context):
 		return RTResult().success_break()
+	
+	def visit_PassNode(self, node, context):
+		return RTResult().success(Number.null)
 
 	def visit_SwitchNode(self, node, context):
 		res = RTResult()
@@ -3103,6 +3210,7 @@ global_symbol_table.set("sorted", BuiltInFunction.sorted)
 
 imported_modules = {}
 
+@lru_cache
 def run(fn, text, context=None, new_context=False):
 
 	# Generate Tokens

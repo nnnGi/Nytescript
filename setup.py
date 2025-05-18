@@ -22,15 +22,10 @@ try:
 
     print(f"Attempting to modify settings file at: {settings_path}")
 
-    # Check if the settings file exists
     if not os.path.exists(settings_path):
         print(f'Visual Studio Code Settings.json not found at {settings_path}. Cannot modify.')
-        exit() # Exit if the file doesn't exist
+        exit()
 
-    # --- PASTE THE *COMPLETE* JSON CONTENT YOU WANT AS THE BASE FOR YOUR settings.json HERE ---
-    # This should be the entire content of the file, including the outer {} braces.
-    # Ensure this is valid JSON.
-    # IMPORTANT: This will be the BASE. Existing font/theme settings will be merged into this.
     base_settings_content = """
 {
     "security.workspace.trust.untrustedFiles": "open",

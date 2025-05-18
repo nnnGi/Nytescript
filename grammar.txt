@@ -8,7 +8,9 @@ Number       : INT|FLOAT
 
 NoneType     : [Returned by function_std]
 
+FString      : BACKTICK (characters OR ${statement}) BACKTICK
 String       : (SINGLE-QUOTE OR DOUBLE-QUOTE) characters (SINGLE-QUOTE OR DOUBLE-QUOTE)
+             : FString
 
 function_std : print LPAREN value RPAREN -> STDOUT
              : (CLEAR OR CLS) LPAREN RPAREN -> STDOUT

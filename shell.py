@@ -22,6 +22,7 @@ Nothing needs to be installed except the ```nytescript.py``` and ```shell.py``` 
 
 import nytescript
 import os, sys, platform
+from functools import lru_cache
 
 if sys.platform != 'win32':
 	try:
@@ -40,9 +41,9 @@ if sys.platform != 'win32':
 	except:
 		pass
 
+@lru_cache
 def shell() -> None:
 	os.system('clear' if os.name == 'posix' else 'cls')
-	# INTEPRETER_LANG = ((sys.version.split(' (')[1]).split(') ['))[0]
 	INTEPRETER_LANG = sys.version.split(' [')[0]
 	BOOT_INFO = f'Nytescript {nytescript.VERSION} [Python {INTEPRETER_LANG}] on {platform.system() if platform.system() != "Darwin" else "Darwin (MacOS)"}'
 
@@ -62,13 +63,14 @@ def shell() -> None:
 			print(error.as_string())
 		elif result:
 			if len(result.elements) == 1:
-				if repr(result.elements[0]) != 'NoneType':
+				if repr(result.elements[0]) != 'None':
 					print(repr(result.elements[0]))
 				else:
 					...
 			else:
 				print(repr(result))
 
+@lru_cache
 def intepreter(file) -> None:
 	result, error = nytescript.run('<program>', f'run(\'{file}\')')
 
