@@ -1,4 +1,11 @@
 '''
+Libraries / Modules Pre Installed:
+	- os
+	- sys
+	- math
+	- string
+	- collections # Added for OrderedDict for LRU cache (though not fully implemented here)
+
 Nytescript Shell and Intepreter, written by @_nnn_ (A.K.A @FlyBoyAce2) in Python 3.12.9, 3.13.2	and 3.13.3
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
@@ -17,8 +24,8 @@ Nothing needs to be installed except the 'nytescript.py' file, preferably Python
 #######################################
 
 import string
-import os, sys, math, time
-from functools import lru_cache
+import os, sys, math
+import time
 import collections
 
 #######################################
@@ -156,6 +163,7 @@ class Position:
 TT_INT          = 'INT'
 TT_FLOAT        = 'FLOAT'
 TT_STRING       = 'STRING'
+TT_FSTRING      = 'FSTRING'
 TT_IDENTIFIER   = 'IDENTIFIER'
 TT_KEYWORD      = 'KEYWORD'
 TT_PLUS        	= 'PLUS'
@@ -277,7 +285,9 @@ class Lexer:
 				case '\'':
 					tokens.append(self.make_string('\''))
 				case '`':
-					tokens.append(self.make_fstring('`'))
+					token, error = self.make_fstring()
+					if error: return [], error
+					tokens.append(token)
 				case '+':
 					tokens.append(Token(TT_PLUS, pos_start=self.pos))
 					self.advance()
@@ -384,55 +394,82 @@ class Lexer:
 		self.advance()
 		return Token(TT_STRING, string, pos_start, self.pos)
 
-	def make_fstring(self, string_char):
-		string = ''
+	def make_fstring(self):
 		pos_start = self.pos.copy()
-		escape_character = False
 		self.advance()
+		segments = []
+		current_segment = ""
+		in_expression = False
+		brace_level = 0
+		expr_start_idx = -1
 
-		escape_characters = {
-			'n': '\n',
-			't': '\t',
-			'r': '\r'
-		}
+		while self.current_char != None and self.current_char != '`':
+			if not in_expression and self.current_char == '$' and self.peek(1) == '{':
+				if current_segment:
+					segments.append(('string', current_segment))
+					current_segment = ""
+				self.advance()
+				self.advance()
+				in_expression = True
+				brace_level = 1
+				expr_start_idx = self.pos.idx
+				continue
 
-		while self.current_char and (self.current_char != string_char or escape_character):
-			if escape_character:
-				string += escape_characters.get(self.current_char, self.current_char)
-			else:
-				if self.current_char == '\\':
-					escape_character = True
+			if in_expression:
+				if self.current_char == '{':
+					brace_level += 1
+				elif self.current_char == '}':
+					brace_level -= 1
+
+				if self.current_char == '}' and brace_level == 0:
+					if expr_start_idx == -1:
+						return None, InvalidSyntaxError(self.pos, self.pos, "Unexpected '}' in f-string expression")
+
+					expr_content = self.text[expr_start_idx : self.pos.idx]
+					segments.append(('expr_content', expr_content))
+					current_segment = ""
+					in_expression = False
+					expr_start_idx = -1
 					self.advance()
 					continue
-				elif self.current_char == '$':
+
+				if self.current_char != None:
 					self.advance()
-					if self.current_char == '{':
-						self.advance()
-						chars = ''
-						while self.current_char != '}':
-							chars += self.current_char
-							self.advance()
-						
-						try:
-							result, error = run('<program>', chars)
-						except:
-							error = True
-						if error:
-							return Token(TT_STRING, '', pos_start, self.pos)
-						string += str(result)
-						
-					else:
-						string += '$'
-						continue
-
 				else:
-					string += self.current_char
+					return None, ExpectedCharError(self.pos_start, self.pos, "Expected '}' to close f-string expression")
 
-			self.advance()
-			escape_character = False
+			else:
+				if self.current_char == '\\' and self.peek(1) in ['`', '$', '\\']:
+					self.advance()
+					if self.current_char != None:
+						current_segment += self.current_char
+						self.advance()
+					else:
+						return None, IllegalCharError(self.pos.copy().advance(-1), self.pos, "Escape sequence not completed in f-string")
+					continue
+
+				if self.current_char != None:
+					current_segment += self.current_char
+					self.advance()
+				else:
+					break
+
+		if self.current_char != '`':
+			return None, ExpectedCharError(self.pos_start, self.pos, "Expected '`' to close f-string")
+
+		if current_segment:
+			segments.append(('string', current_segment))
 
 		self.advance()
-		return Token(TT_STRING, string, pos_start, self.pos)
+
+		return Token(TT_FSTRING, segments, pos_start, self.pos), None
+
+	def peek(self, offset=1):
+		peek_idx = self.pos.idx + offset
+		if peek_idx < len(self.text):
+			return self.text[peek_idx]
+		return None
+
 
 	def make_identifier(self):
 		id_str = ''
@@ -542,6 +579,17 @@ class StringNode:
 
 	def __repr__(self):
 		return f'{self.tok}'
+
+class TemplateStringNode:
+	def __init__(self, segments, pos_start, pos_end):
+		self.segments = segments
+
+		self.pos_start = pos_start
+		self.pos_end = pos_end
+
+	def __repr__(self):
+		return f'TemplateString({self.segments})'
+
 
 class ListNode:
 	def __init__(self, element_nodes, pos_start, pos_end):
@@ -739,6 +787,9 @@ class ParseResult:
 			self.error = error
 		return self
 
+	def should_return(self):
+		return self.error is not None
+
 #######################################
 # PARSER -> AST
 #######################################
@@ -834,7 +885,7 @@ class Parser:
 			res.register_advancement()
 			self.advance()
 			return res.success(BreakNode(pos_start, self.current_tok.pos_start.copy()))
-		
+
 		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[24]):
 			res.register_advancement()
 			self.advance()
@@ -849,6 +900,7 @@ class Parser:
 			import_node = res.register(self.import_expr())
 			if res.error: return res
 			return res.success(import_node)
+
 
 		expr = res.register(self.expr())
 		if res.error:
@@ -1043,6 +1095,48 @@ class Parser:
 			res.register_advancement()
 			self.advance()
 			return res.success(StringNode(tok))
+
+		elif tok.type == TT_FSTRING:
+			pos_start = tok.pos_start.copy()
+			segments = []
+
+			for segment_type, segment_content in tok.value:
+				if segment_type == 'string':
+					segment_pos_start = pos_start.copy().advance(self.tokens[self.tok_idx].pos_start.idx - pos_start.idx)
+					segment_pos_end = segment_pos_start.copy().advance(len(segment_content))
+					segments.append(StringNode(Token(TT_STRING, segment_content, segment_pos_start, segment_pos_end)))
+				elif segment_type == 'expr_content':
+					expr_pos_start = pos_start.copy().advance(self.tokens[self.tok_idx].pos_start.idx - pos_start.idx + segment_content.find(segment_content))
+					expr_lexer = Lexer(self.tokens[0].pos_start.fn, segment_content)
+					expr_tokens, error = expr_lexer.tokeniser()
+					if error:
+						if error.pos_start:
+							error.pos_start.idx += expr_pos_start.idx
+							error.pos_start.col += expr_pos_start.col
+						if error.pos_end:
+							error.pos_end.idx += expr_pos_start.idx
+							error.pos_end.col += expr_pos_start.col
+						return res.failure(error)
+
+					expr_parser = Parser(expr_tokens)
+					expr_node = res.register(expr_parser.expr())
+					if res.error:
+						if res.error.pos_start:
+							res.error.pos_start.idx += expr_pos_start.idx
+							res.error.pos_start.col += expr_pos_start.col
+						if res.error.pos_end:
+							res.error.pos_end.idx += expr_pos_start.idx
+							res.error.pos_end.col += expr_pos_start.col
+						res.error.details = f"Error in f-string expression: {res.error.details}"
+						return res
+
+					segments.append(expr_node)
+
+			res.register_advancement()
+			self.advance()
+
+			return res.success(TemplateStringNode(segments, pos_start, tok.pos_end))
+
 
 		elif tok.type == TT_IDENTIFIER:
 			res.register_advancement()
@@ -1862,10 +1956,10 @@ class Value:
 
 	def powed_by(self, other):
 		return None, self.illegal_operation(other)
-	
+
 	def percent_by(self, other):
 		return None, self.illegal_operation(other)
-	
+
 	def fdiv_by(self, other):
 		return None, self.illegal_operation(other)
 
@@ -1893,8 +1987,8 @@ class Value:
 	def ored_by(self, other):
 		return None, self.illegal_operation(other)
 
-	def notted(self, other):
-		return None, self.illegal_operation(other)
+	def notted(self):
+		return None, self.illegal_operation()
 
 	def execute(self, args):
 		return RTResult().failure(self.illegal_operation())
@@ -1927,10 +2021,10 @@ class NoneType(Value):
 		return copy
 
 	def __str__(self):
-		return 'None'
+		return 'NoneType'
 
 	def __repr__(self):
-		return 'None'
+		return 'NoneType'
 
 NoneType.none = NoneType()
 
@@ -1975,15 +2069,27 @@ class Number(Value):
 			return Number(self.value ** other.value).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
-	
+
 	def fdiv_by(self, other):
 		if isinstance(other, Number):
+			if other.value == 0:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'Division by Zero',
+					self.context
+				)
 			return Number(self.value // other.value).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def percent_by(self, other):
 		if isinstance(other, Number):
+			if other.value == 0:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'Modulo by Zero',
+					self.context
+				)
 			return Number(self.value % other.value).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
@@ -1992,13 +2098,13 @@ class Number(Value):
 		if isinstance(other, Number):
 			return Number(int(self.value == other.value)).set_context(self.context), None
 		else:
-			return None, Value.illegal_operation(self, other)
+			return Number(int(self.value == other.value)).set_context(self.context), None # Allow comparison with other types, e.g., 5 == "5" might be false
 
 	def get_comparison_ne(self, other):
 		if isinstance(other, Number):
 			return Number(int(self.value != other.value)).set_context(self.context), None
 		else:
-			return None, Value.illegal_operation(self, other)
+			return Number(int(self.value != other.value)).set_context(self.context), None # Allow comparison with other types
 
 	def get_comparison_lt(self, other):
 		if isinstance(other, Number):
@@ -2049,6 +2155,8 @@ class Number(Value):
 		return self.value != 0
 
 	def __str__(self):
+		if isinstance(self.value, float):
+			return f"{self.value:.10f}".rstrip('0').rstrip('.') or '0'
 		return str(self.value)
 
 	def __repr__(self):
@@ -2066,25 +2174,34 @@ class String(Value):
 		self.value = value
 
 	def added_to(self, other):
-		if isinstance(other, String):
-			return String(self.value + other.value).set_context(self.context), None
-		else:
-			return None, Value.illegal_operation(self, other)
+		return String(self.value + str(other)).set_context(self.context), None
 
 	def multed_by(self, other):
 		if isinstance(other, Number):
+			if not isinstance(other.value, int):
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'String multiplication requires an integer',
+					self.context
+				)
 			return String(self.value * other.value).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def dived_by(self, other):
 		if isinstance(other, Number):
-			try:
-				return String(self.value[other.value]).set_context(self.context), None
-			except:
+			if not isinstance(other.value, int):
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'Element at this index could not be retrieved from string because index is out of bounds',
+					'String indexing requires an integer',
+					self.context
+				)
+			try:
+				return String(self.value[other.value]).set_context(self.context), None
+			except IndexError:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'String index out of bounds',
 					self.context
 				)
 		else:
@@ -2092,12 +2209,18 @@ class String(Value):
 
 	def powed_by(self, other):
 		if isinstance(other, Number):
-			try:
-				return String(self.value[::other.value]).set_context(self.context), None
-			except:
+			if not isinstance(other.value, int) or other.value == 0:
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'String cannot do slice stepping with this type',
+					'String slicing step requires a non-zero integer',
+					self.context
+				)
+			try:
+				return String(self.value[::other.value]).set_context(self.context), None
+			except Exception:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'String slicing with step failed',
 					self.context
 				)
 		else:
@@ -2107,13 +2230,13 @@ class String(Value):
 		if isinstance(other, String):
 			return Number(int(self.value == other.value)).set_context(self.context), None
 		else:
-			return None, Value.illegal_operation(self, other)
+			return Number(int(self.value == str(other))).set_context(self.context), None
 
 	def get_comparison_ne(self, other):
 		if isinstance(other, String):
 			return Number(int(self.value != other.value)).set_context(self.context), None
 		else:
-			return None, Value.illegal_operation(self, other)
+			return Number(int(self.value != str(other))).set_context(self.context), None
 
 	def is_true(self):
 		return len(self.value) > 0
@@ -2142,14 +2265,20 @@ class List(Value):
 
 	def subbed_by(self, other):
 		if isinstance(other, Number):
-			new_list = self.copy()
-			try:
-				new_list.elements.pop(other.value)
-				return new_list, None
-			except:
+			if not isinstance(other.value, int):
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'Element at this index could not be removed from list because index is out of bounds',
+					'List pop requires an integer index',
+					self.context
+				)
+			new_list = self.copy()
+			try:
+				element = new_list.elements.pop(other.value)
+				return new_list, None
+			except IndexError:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'List index out of bounds for pop',
 					self.context
 				)
 		else:
@@ -2165,12 +2294,18 @@ class List(Value):
 
 	def dived_by(self, other):
 		if isinstance(other, Number):
-			try:
-				return self.elements[other.value], None
-			except:
+			if not isinstance(other.value, int):
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'Element at this index could not be retrieved from list because index is out of bounds',
+					'List indexing requires an integer',
+					self.context
+				)
+			try:
+				return self.elements[other.value].copy().set_pos(self.pos_start, self.pos_end).set_context(self.context), None
+			except IndexError:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'List index out of bounds',
 					self.context
 				)
 		else:
@@ -2178,25 +2313,53 @@ class List(Value):
 
 	def powed_by(self, other):
 		if isinstance(other, Number):
-			try:
-				return List(self.elements[::other.value]).set_context(self.context), None
-			except:
+			if not isinstance(other.value, int) or other.value == 0:
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'List cannot do slice stepping with this type',
+					'List slicing step requires a non-zero integer',
+					self.context
+				)
+			try:
+				sliced_elements = [elem.copy() for elem in self.elements[::other.value]]
+				return List(sliced_elements).set_context(self.context).set_pos(self.pos_start, self.pos_end), None
+			except Exception:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'List slicing with step failed',
 					self.context
 				)
 		else:
 			return None, Value.illegal_operation(self, other)
 
+	def get_comparison_eq(self, other):
+		if isinstance(other, List):
+			if len(self.elements) != len(other.elements):
+				return Number.false.set_context(self.context), None
+			for i in range(len(self.elements)):
+				comparison_result, error = self.elements[i].get_comparison_eq(other.elements[i])
+				if error: return None, error
+				if not comparison_result.is_true():
+					return Number.false.set_context(self.context), None
+			return Number.true.set_context(self.context), None
+		else:
+			return Number.false.set_context(self.context), None
+
+	def get_comparison_ne(self, other):
+		comparison_result, error = self.get_comparison_eq(other)
+		if error: return None, error
+		return Number(1 - comparison_result.value).set_context(self.context), None
+
 	def copy(self):
-		copy = List(self.elements)
+		copy = List([element.copy() for element in self.elements])
 		copy.set_pos(self.pos_start, self.pos_end)
 		copy.set_context(self.context)
 		return copy
 
+	def is_true(self):
+		return len(self.elements) > 0
+
 	def __str__(self):
-		return ", ".join([str(x) for x in self.elements])
+		return ", ".join([repr(x) for x in self.elements])
 
 	def __repr__(self):
 		return f'[{", ".join([repr(x) for x in self.elements])}]'
@@ -2208,14 +2371,12 @@ class BaseFunction(Value):
 
 	def generate_new_context(self):
 		new_context = Context(self.name, self.context, self.pos_start)
-		new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
+		new_context.symbol_table = SymbolTable(self.context.symbol_table if self.context else None)
 		return new_context
+
 
 	def check_args(self, arg_names, args):
 		res = RTResult()
-
-		if len(args) == 0:
-			return res.success(NoneType())
 
 		if len(args) > len(arg_names):
 			return res.failure(RTError(
@@ -2237,62 +2398,16 @@ class BaseFunction(Value):
 		for i in range(len(args)):
 			arg_name = arg_names[i]
 			arg_value = args[i]
-			arg_value.set_context(exec_ctx)
-			exec_ctx.symbol_table.set(arg_name, arg_value)
+			exec_ctx.symbol_table.set(arg_name, arg_value.copy().set_context(exec_ctx))
 
 	def check_and_populate_args(self, arg_names, args, exec_ctx):
 		res = RTResult()
-		res.register(self.check_args(arg_names, args))
-		if res.should_return(): return res
+		check_res = self.check_args(arg_names, args)
+		if check_res.error:
+			return res.failure(check_res.error)
+
 		self.populate_args(arg_names, args, exec_ctx)
-		return res.success(None)
-
-class CachedFunction(BaseFunction):
-	def __init__(self, func, max_size=128):
-		super().__init__(func.name)
-		self.func = func
-		self.max_size = max_size
-		self.cache = collections.OrderedDict()
-
-	def execute(self, args):
-		res = RTResult()
-		try:
-			cache_key = tuple(str(arg) for arg in args)
-		except Exception as e:
-			return res.failure(RTError(
-				self.pos_start, self.pos_end,
-				f"Failed to generate cache key from arguments: {e}",
-				self.context
-			))
-		if cache_key in self.cache:
-			result = self.cache[cache_key]
-			self.cache.move_to_end(cache_key)
-			return res.success(result.copy().set_pos(self.pos_start, self.pos_end).set_context(self.context))
-
-		result = res.register(self.func.execute(args))
-		if res.should_return():
-			return res
-
-		if len(self.cache) >= self.max_size:
-			try:
-				self.cache.popitem(last=False)
-			except KeyError:
-				pass
-
-		self.cache[cache_key] = result.copy().set_pos(self.pos_start, self.pos_end).set_context(self.context)
-		return res.success(result.copy().set_pos(self.pos_start, self.pos_end).set_context(self.context))
-
-
-	def copy(self):
-		copy = CachedFunction(self.func, self.max_size)
-		copy.cache = self.cache
-		copy.lru_list = self.cache
-		copy.set_context(self.context)
-		copy.set_pos(self.pos_start, self.pos_end)
-		return copy
-
-	def __repr__(self):
-		return f"<Cached Function {self.name} (max_size={self.max_size})>"
+		return res.success(NoneType.none)
 
 class Function(BaseFunction):
 	def __init__(self, name, body_node, arg_names, should_auto_return):
@@ -2306,14 +2421,20 @@ class Function(BaseFunction):
 		interpreter = Interpreter()
 		exec_ctx = self.generate_new_context()
 
-		res.register(self.check_and_populate_args(self.arg_names, args, exec_ctx))
-		if res.should_return(): return res
+		check_args_res = self.check_and_populate_args(self.arg_names, args, exec_ctx)
+		if check_args_res.should_return():
+			return check_args_res
 
 		value = res.register(interpreter.visit(self.body_node, exec_ctx))
-		if res.should_return() and res.func_return_value == None: return res
 
-		ret_value = (value if self.should_auto_return else None) or res.func_return_value or Number.null
-		return res.success(ret_value)
+		if res.func_return_value is not None:
+			return res
+
+		if self.should_auto_return:
+			return res.success(value if value is not None else Number.null)
+
+		return res.success(Number.null)
+
 
 	def copy(self):
 		copy = Function(self.name, self.body_node, self.arg_names, self.should_auto_return)
@@ -2335,14 +2456,18 @@ class BuiltInFunction(BaseFunction):
 		method_name = f'execute_{self.name}'
 		method = getattr(self, method_name, self.no_visit_method)
 
-		res.register(self.check_and_populate_args(method.arg_names, args, exec_ctx))
-		if res.should_return(): return res
+		check_args_res = self.check_and_populate_args(method.arg_names, args, exec_ctx)
+		if check_args_res.should_return():
+			return check_args_res
 
 		return_value = res.register(method(exec_ctx))
-		if res.should_return(): return res
+		if res.should_return():
+			return res
+
 		return res.success(return_value)
 
-	def no_visit_method(self, node, context):
+
+	def no_visit_method(self, context):
 		raise Exception(f'No execute_{self.name} method defined')
 
 	def copy(self):
@@ -2358,15 +2483,13 @@ class BuiltInFunction(BaseFunction):
 
 	def execute_print(self, exec_ctx):
 		value = exec_ctx.symbol_table.get('value')
-		if value != String(''):
-			print(str(value))
-		else:
-			print()
-		return RTResult().success(NoneType())
+		print(str(value))
+		return RTResult().success(NoneType.none)
 	execute_print.arg_names = ['value']
 
 	def execute_print_ret(self, exec_ctx):
-		return RTResult().success(String(str(exec_ctx.symbol_table.get('value'))))
+		value = exec_ctx.symbol_table.get('value')
+		return RTResult().success(String(str(value)))
 	execute_print_ret.arg_names = ['value']
 
 	def execute_input(self, exec_ctx):
@@ -2397,48 +2520,48 @@ class BuiltInFunction(BaseFunction):
 
 	def execute_clear(self, exec_ctx):
 		os.system('cls' if os.name == 'nt' else 'clear')
-		return RTResult().success(NoneType())
+		return RTResult().success(NoneType.none)
 	execute_clear.arg_names = []
 
 	def execute_exit(self, exec_ctx):
 		sys.exit()
-		return RTResult().success(NoneType())
+		return RTResult().success(NoneType.none)
 	execute_exit.arg_names = []
 
 	def execute_sys_eval(self, exec_ctx):
-		command = exec_ctx.symbol_table.get('value')
-		if not isinstance(command, String):
+		command_value = exec_ctx.symbol_table.get('value')
+		if not isinstance(command_value, String):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Argument passed into function was not String",
+				"Argument passed into sys_eval must be a String",
 				exec_ctx
 			))
 
+		command_string = command_value.value
 		try:
-			os.system(command.value)
-		except:
+			os.system(command_string)
+		except Exception as e:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Failed to execute script",
+				f"Failed to execute system command: {e}",
 				exec_ctx
 			))
 
-		return RTResult().success(NoneType())
+		return RTResult().success(NoneType.none)
 	execute_sys_eval.arg_names = ['value']
 
 	def execute_Number(self, exec_ctx):
-		data = exec_ctx.symbol_table.get('value')
-		ttype = type(data)
-		value = str(data)
+		data_value = exec_ctx.symbol_table.get('value')
 		try:
-			if '.' in value:
-				result = float(value)
+			value_str = str(data_value)
+			if '.' in value_str:
+				result = float(value_str)
 			else:
-				result = int(value)
-		except ValueError or TypeError:
+				result = int(value_str)
+		except (ValueError, TypeError) as e:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				f"Number() argument must be a String or Number, not {ttype}",
+				f"Cannot convert value to Number: {e}",
 				exec_ctx
 			))
 		return RTResult().success(Number(result))
@@ -2447,77 +2570,82 @@ class BuiltInFunction(BaseFunction):
 	def execute_String(self, exec_ctx):
 		value = exec_ctx.symbol_table.get('value')
 		try:
-			result = str(value)
-		except ValueError:
+			result_str = str(value)
+		except Exception as e:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Cannot convert to Type: String",
+				f"Cannot convert value to String: {e}",
 				exec_ctx
 			))
-		return RTResult().success(String(result))
+		return RTResult().success(String(result_str))
 	execute_String.arg_names = ['value']
 
 	def execute_List(self, exec_ctx):
 		value = exec_ctx.symbol_table.get('value')
 		if isinstance(value, List):
-			return RTResult().success(value)
+			return RTResult().success(value.copy())
 		try:
-			result = list(value.value)
-		except ValueError:
+			if hasattr(value, 'value') and isinstance(value.value, (list, tuple, str)):
+				elements = [elem if isinstance(elem, Value) else String(str(elem)) for elem in list(value.value)]
+				return RTResult().success(List(elements))
+			elif isinstance(value, (list, tuple, str)):
+				elements = [elem if isinstance(elem, Value) else String(str(elem)) for elem in list(value)]
+				return RTResult().success(List(elements))
+			else:
+				return RTResult().failure(RTError(
+					self.pos_start, self.pos_end,
+					f"Cannot convert type '{type(value).__name__}' to List",
+					exec_ctx
+				))
+		except Exception as e:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Cannot convert to Type: List",
+				f"Failed to convert value to List: {e}",
 				exec_ctx
 			))
-		return RTResult().success(List(result))
 	execute_List.arg_names = ['value']
 
 	def execute_strcon(self, exec_ctx):
-		value = exec_ctx.symbol_table.get("list")
-		value = value.elements
-		try:
-			for i in range(len(value)):
-				value[i] = str(value[i])
-			return RTResult().success(String(''.join(value)))
-		except:
+		list_value = exec_ctx.symbol_table.get("list")
+		if not isinstance(list_value, List):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Cannot Concatenate String",
+				"strcon argument must be a List",
+				exec_ctx
+			))
+		elements = list_value.elements
+		try:
+			string_elements = [str(item) for item in elements]
+			return RTResult().success(String(''.join(string_elements)))
+		except Exception as e:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				f"Failed to concatenate list elements to String: {e}",
 				exec_ctx
 			))
 	execute_strcon.arg_names = ['list']
 
 	def execute_is_in(self, exec_ctx):
-		iterable = exec_ctx.symbol_table.get("list")
-		item = exec_ctx.symbol_table.get("value")
-		if isinstance(iterable, String):
-			iterable = iterable.value
-			if not isinstance(item, String):
-				return RTResult().failure(RTError(
-					self.pos_start, self.pos_end,
-					"Second Argument should be String",
-					exec_ctx
-				))
+		iterable_value = exec_ctx.symbol_table.get("list")
+		item_value = exec_ctx.symbol_table.get("value")
 
-			item = str(item)
-			for i in iterable:
-				if item == i:
-					return RTResult().success(Number.true)
+		if isinstance(iterable_value, String):
+			if str(item_value) in iterable_value.value:
+				return RTResult().success(Number.true)
 			return RTResult().success(Number.false)
 
-		elif isinstance(iterable, List):
-			iterable = iterable.elements
-			item = item.value
-			for i in iterable:
-				i = i.value
-				if item == i:
+		elif isinstance(iterable_value, List):
+			for element in iterable_value.elements:
+				comparison_result, error = element.get_comparison_eq(item_value)
+				if error: return RTResult().failure(error)
+				if comparison_result.is_true():
 					return RTResult().success(Number.true)
 			return RTResult().success(Number.false)
 
 		else:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"First Argument is not iterable",
+				f"First argument to is_in must be an iterable (String or List), not '{type(iterable_value).__name__}'",
 				exec_ctx
 			))
 	execute_is_in.arg_names = ["list", "value"]
@@ -2528,176 +2656,206 @@ class BuiltInFunction(BaseFunction):
 	execute_is_number.arg_names = ["value"]
 
 	def execute_is_string(self, exec_ctx):
-		is_number = isinstance(exec_ctx.symbol_table.get("value"), String)
-		return RTResult().success(Number.true if is_number else Number.false)
+		is_string = isinstance(exec_ctx.symbol_table.get("value"), String)
+		return RTResult().success(Number.true if is_string else Number.false)
 	execute_is_string.arg_names = ["value"]
 
 	def execute_is_list(self, exec_ctx):
-		is_number = isinstance(exec_ctx.symbol_table.get("value"), List)
-		return RTResult().success(Number.true if is_number else Number.false)
+		is_list = isinstance(exec_ctx.symbol_table.get("value"), List)
+		return RTResult().success(Number.true if is_list else Number.false)
 	execute_is_list.arg_names = ["value"]
 
 	def execute_is_function(self, exec_ctx):
-		is_number = isinstance(exec_ctx.symbol_table.get("value"), BaseFunction)
-		return RTResult().success(Number.true if is_number else Number.false)
+		is_function = isinstance(exec_ctx.symbol_table.get("value"), BaseFunction)
+		return RTResult().success(Number.true if is_function else Number.false)
 	execute_is_function.arg_names = ["value"]
 
 	def execute_sorted(self, exec_ctx):
-		list_ = exec_ctx.symbol_table.get("list")
-		reverse = exec_ctx.symbol_table.get("value")
+		list_value = exec_ctx.symbol_table.get("list")
+		reverse_value = exec_ctx.symbol_table.get("value")
 
-		if not isinstance(list_, List):
+		if not isinstance(list_value, List):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"First Argument must be list",
+				"First argument to sorted must be a list",
 				exec_ctx
 			))
-		if not isinstance(reverse, Number):
+		if not isinstance(reverse_value, Number):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Second Argument must be Number / Boolean",
+				"Second argument to sorted must be a Number (boolean)",
 				exec_ctx
 			))
-		ulist = list_.elements
-		ureverse = reverse.value
-		for i in range(len(ulist)):
-			ulist[i] = ulist[i].value
+
+		elements = list_value.elements
+		reverse = bool(reverse_value.value)
+
+		def sort_key(item):
+			if isinstance(item, (Number, String)):
+				return item.value
+			raise TypeError(f"Cannot sort list containing type '{type(item).__name__}'")
 
 		try:
-			result = sorted(ulist, reverse=ureverse)
-			return RTResult().success(List(result))
+			sorted_elements = sorted(elements, key=sort_key, reverse=reverse)
+			return RTResult().success(List([elem.copy() for elem in sorted_elements]).set_context(exec_ctx).set_pos(list_value.pos_start, list_value.pos_end))
 
+		except TypeError as e:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				f"Sorting failed: {e}",
+				exec_ctx
+			))
 		except Exception as e:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				f"Failed to Sort with error {e}",
+				f"Sorting failed with error: {e}",
 				exec_ctx
 			))
 	execute_sorted.arg_names = ["list", "value"]
 
 	def execute_append(self, exec_ctx):
-		list_ = exec_ctx.symbol_table.get("list")
-		value = exec_ctx.symbol_table.get("value")
+		list_value = exec_ctx.symbol_table.get("list")
+		value_to_append = exec_ctx.symbol_table.get("value")
 
-		if not isinstance(list_, List):
+		if not isinstance(list_value, List):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"First argument must be list",
+				"First argument to append must be a list",
 				exec_ctx
 			))
 
-		list_.elements.append(value)
-		return RTResult().success(NoneType())
+		list_value.elements.append(value_to_append.copy().set_context(list_value.context))
+		return RTResult().success(NoneType.none)
 	execute_append.arg_names = ["list", "value"]
 
 	def execute_pop(self, exec_ctx):
-		list_ = exec_ctx.symbol_table.get("list")
-		index = exec_ctx.symbol_table.get("index")
+		list_value = exec_ctx.symbol_table.get("list")
+		index_value = exec_ctx.symbol_table.get("index")
 
-		if not isinstance(list_, List):
+		if not isinstance(list_value, List):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"First argument must be list",
+				"First argument to pop must be a list",
 				exec_ctx
 			))
 
-		if not isinstance(index, Number):
+		if not isinstance(index_value, Number):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Second argument must be number",
+				"Second argument to pop must be a number (integer index)",
+				exec_ctx
+			))
+
+		if not isinstance(index_value.value, int):
+			return RTResult().failure(RTError(
+				index_value.pos_start, index_value.pos_end,
+				"List pop index must be an integer",
 				exec_ctx
 			))
 
 		try:
-			element = list_.elements.pop(index.value)
-		except:
+			element = list_value.elements.pop(index_value.value)
+			return RTResult().success(element.copy().set_pos(list_value.pos_start, list_value.pos_end).set_context(exec_ctx))
+		except IndexError:
 			return RTResult().failure(RTError(
-				self.pos_start, self.pos_end,
-				'Element at this index could not be removed from list because index is out of bounds',
+				index_value.pos_start, index_value.pos_end,
+				'List index out of bounds for pop',
 				exec_ctx
 			))
-		return RTResult().success(element)
+		except Exception as e:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				f"Pop failed with error: {e}",
+				exec_ctx
+			))
 	execute_pop.arg_names = ["list", "index"]
 
 	def execute_extend(self, exec_ctx):
-		listA = exec_ctx.symbol_table.get("listA")
-		listB = exec_ctx.symbol_table.get("listB")
+		listA_value = exec_ctx.symbol_table.get("listA")
+		listB_value = exec_ctx.symbol_table.get("listB")
 
-		if not isinstance(listA, List):
+		if not isinstance(listA_value, List):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"First argument must be list",
+				"First argument to extend must be a list",
 				exec_ctx
 			))
 
-		if not isinstance(listB, List):
+		if not isinstance(listB_value, List):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Second argument must be list",
+				"Second argument to extend must be a list",
 				exec_ctx
 			))
 
-		listA.elements.extend(listB.elements)
-		return RTResult().success(NoneType())
+		listA_value.elements.extend([elem.copy().set_context(listA_value.context) for elem in listB_value.elements])
+		return RTResult().success(NoneType.none)
 	execute_extend.arg_names = ["listA", "listB"]
 
 	def execute_len(self, exec_ctx):
-		list_ = exec_ctx.symbol_table.get("list")
+		value = exec_ctx.symbol_table.get("list")
 
-		if not isinstance(list_, List) and not isinstance(list_, String):
+		if isinstance(value, List):
+			return RTResult().success(Number(len(value.elements)))
+		elif isinstance(value, String):
+			return RTResult().success(Number(len(value.value)))
+		else:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Argument must be list or string",
+				f"Argument to len must be a list or string, not '{type(value).__name__}'",
 				exec_ctx
 			))
-
-		if isinstance(list_, List):
-			return RTResult().success(Number(len(list_.elements)))
-		return RTResult().success(Number(len(list_.value)))
 	execute_len.arg_names = ["list"]
 
 	def execute_run(self, exec_ctx):
-		fn = exec_ctx.symbol_table.get("fn")
+		fn_value = exec_ctx.symbol_table.get("fn")
 
-		if not isinstance(fn, String):
+		if not isinstance(fn_value, String):
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				"Second argument must be string",
+				"Argument to run must be a string (filename)",
 				exec_ctx
 			))
 
-		fn = fn.value
+		fn = fn_value.value
 		if not fn.endswith(FILE_EXTENSION):
 			return RTResult().failure(RTError(
-				self.pos_start, self.pos_end,
+				fn_value.pos_start, fn_value.pos_end,
 				f"File Extension should be {FILE_EXTENSION}",
 				exec_ctx
 			))
+
 		try:
 			with open(fn, "r") as f:
 				script = f.read()
 				if script.strip() == '':
-					return RTResult().success(NoneType())
+					return RTResult().success(NoneType.none)
+		except FileNotFoundError:
+			return RTResult().failure(RTError(
+				fn_value.pos_start, fn_value.pos_end,
+				f"Failed to load script \"{fn}\": File not found",
+				exec_ctx
+			))
 		except Exception as e:
 			return RTResult().failure(RTError(
-				self.pos_start, self.pos_end,
-				f"Failed to load script \"{fn}\"\n" + str(e),
+				fn_value.pos_start, fn_value.pos_end,
+				f"Failed to load script \"{fn}\": {e}",
 				exec_ctx
 			))
 
-		# Use the main run function for running the imported script
-		_, error = run(fn, script, new_context=True)
+		module_result_value, module_error = run(fn, script, context=exec_ctx, new_context=True)
 
-		if error:
+		if module_error:
 			return RTResult().failure(RTError(
-				self.pos_start, self.pos_end,
-				f"Failed to finish executing script \"{fn}\"\n" +
-				error.as_string(),
+				fn_value.pos_start, fn_value.pos_end,
+				f"Error executing script \"{fn}\":\n{module_error.as_string()}",
 				exec_ctx
 			))
 
-		return RTResult().success(NoneType())
+		return RTResult().success(module_result_value if module_result_value is not None else NoneType.none)
+
 	execute_run.arg_names = ["fn"]
+
 
 BuiltInFunction.print         = BuiltInFunction("print")
 BuiltInFunction.print_ret     = BuiltInFunction("print_ret")
@@ -2724,7 +2882,7 @@ BuiltInFunction.extend        = BuiltInFunction("extend")
 BuiltInFunction.len		   	  = BuiltInFunction("len")
 BuiltInFunction.run			  = BuiltInFunction("run")
 BuiltInFunction.exit          = BuiltInFunction("exit")
-# BuiltInFunction.progress      = BuiltInFunction("progress")
+# BuiltInFunction.cached_func = BuiltInFunction("cached_func")
 
 class ModuleValue(Value):
 	def __init__(self, name, symbol_table):
@@ -2815,6 +2973,27 @@ class Interpreter:
 			String(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
 		)
 
+	def visit_TemplateStringNode(self, node, context):
+		res = RTResult()
+		interpolated_string = ""
+
+		for segment_node in node.segments:
+			segment_value = res.register(self.visit(segment_node, context))
+			if res.should_return():
+				return res
+
+			try:
+				interpolated_string += str(segment_value)
+			except Exception as e:
+				return res.failure(RTError(
+					segment_node.pos_start, segment_node.pos_end,
+					f"Failed to convert value to string in f-string: {e}",
+					context
+				))
+
+		return res.success(String(interpolated_string).set_context(context).set_pos(node.pos_start, node.pos_end))
+
+
 	def visit_ListNode(self, node, context):
 		res = RTResult()
 		elements = []
@@ -2857,7 +3036,7 @@ class Interpreter:
 		if res.should_return(): return res
 		right = res.register(self.visit(node.right_node, context))
 		if res.should_return(): return res
-		
+
 		if node.op_tok.type == TT_PLUS:
 			result, error = left.added_to(right)
 		elif node.op_tok.type == TT_MINUS:
@@ -2892,7 +3071,7 @@ class Interpreter:
 		if error:
 			return res.failure(error)
 		else:
-			return res.success(result.set_pos(node.pos_start, node.pos_end))
+			return res.success(result.set_pos(node.pos_start, node.pos_end).set_context(context))
 
 	def visit_UnaryOpNode(self, node, context):
 		res = RTResult()
@@ -2909,7 +3088,7 @@ class Interpreter:
 		if error:
 			return res.failure(error)
 		else:
-			return res.success(number.set_pos(node.pos_start, node.pos_end))
+			return res.success(number.set_pos(node.pos_start, node.pos_end).set_context(context))
 
 	def visit_IfNode(self, node, context):
 		res = RTResult()
@@ -2947,6 +3126,20 @@ class Interpreter:
 		else:
 			step_value = Number(1)
 
+		if not isinstance(start_value, Number) or not isinstance(end_value, Number) or not isinstance(step_value, Number):
+			return res.failure(RTError(
+				node.pos_start, node.pos_end,
+				"For loop start, end, and step values must be numbers",
+				context
+			))
+
+		if step_value.value == 0:
+			return res.failure(RTError(
+				step_value.pos_start, step_value.pos_end,
+				"For loop step cannot be zero",
+				context
+			))
+
 		i = start_value.value
 
 		if step_value.value >= 0:
@@ -2955,19 +3148,22 @@ class Interpreter:
 			condition = lambda: i > end_value.value
 
 		while condition():
-			context.symbol_table.set(node.var_name_tok.value, Number(i))
+			context.symbol_table.set(node.var_name_tok.value, Number(i).set_context(context))
 			i += step_value.value
 
 			value = res.register(self.visit(node.body_node, context))
 			if res.should_return() and res.loop_should_continue == False and res.loop_should_break == False: return res
 
 			if res.loop_should_continue:
+				res.loop_should_continue = False
 				continue
 
 			if res.loop_should_break:
+				res.loop_should_break = False
 				break
 
-			elements.append(value)
+			if not node.should_return_null:
+				elements.append(value)
 
 		return res.success(
 			Number.null if node.should_return_null else
@@ -2989,12 +3185,15 @@ class Interpreter:
 			if res.should_return() and res.loop_should_continue == False and res.loop_should_break == False: return res
 
 			if res.loop_should_continue:
+				res.loop_should_continue = False
 				continue
 
 			if res.loop_should_break:
+				res.loop_should_break = False
 				break
 
-			elements.append(value)
+			if not node.should_return_null:
+				elements.append(value)
 
 		return res.success(
 			Number.null if node.should_return_null else
@@ -3022,6 +3221,13 @@ class Interpreter:
 		if res.should_return(): return res
 		value_to_call = value_to_call.copy().set_pos(node.pos_start, node.pos_end)
 
+		if not isinstance(value_to_call, BaseFunction):
+			return res.failure(RTError(
+				node.node_to_call.pos_start, node.node_to_call.pos_end,
+				f"Cannot call value of type '{type(value_to_call).__name__}'. Expected a function.",
+				context
+			))
+
 		for arg_node in node.arg_nodes:
 			args.append(res.register(self.visit(arg_node, context)))
 			if res.should_return(): return res
@@ -3047,7 +3253,7 @@ class Interpreter:
 
 	def visit_BreakNode(self, node, context):
 		return RTResult().success_break()
-	
+
 	def visit_PassNode(self, node, context):
 		return RTResult().success(Number.null)
 
@@ -3193,18 +3399,18 @@ global_symbol_table.set("is_in", BuiltInFunction.is_in)
 global_symbol_table.set("is_num", BuiltInFunction.is_number)
 global_symbol_table.set("is_str", BuiltInFunction.is_string)
 global_symbol_table.set("is_list", BuiltInFunction.is_list)
-global_symbol_table.set("is_func", BuiltInFunction.is_function)
+global_symbol_table.set("is_function", BuiltInFunction.is_function)
+global_symbol_table.set("sorted", BuiltInFunction.sorted)
 global_symbol_table.set("append", BuiltInFunction.append)
 global_symbol_table.set("pop", BuiltInFunction.pop)
 global_symbol_table.set("extend", BuiltInFunction.extend)
 global_symbol_table.set("len", BuiltInFunction.len)
 global_symbol_table.set("run", BuiltInFunction.run)
 global_symbol_table.set("exit", BuiltInFunction.exit)
-global_symbol_table.set("sorted", BuiltInFunction.sorted)
+# global_symbol_table.set("cached_func", BuiltInFunction.cached_func)
 
 imported_modules = {}
 
-@lru_cache
 def run(fn, text, context=None, new_context=False):
 
 	# Generate Tokens
