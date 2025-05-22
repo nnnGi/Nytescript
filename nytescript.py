@@ -787,8 +787,8 @@ class ParseResult:
 			self.error = error
 		return self
 
-	def should_return(self):
-		return self.error is not None
+	# def should_return(self):
+	# 	return self.error is not None
 
 #######################################
 # PARSER -> AST
@@ -1987,8 +1987,8 @@ class Value:
 	def ored_by(self, other):
 		return None, self.illegal_operation(other)
 
-	def notted(self):
-		return None, self.illegal_operation()
+	def notted(self, other):
+		return None, self.illegal_operation(other)
 
 	def execute(self, args):
 		return RTResult().failure(self.illegal_operation())
@@ -2021,10 +2021,10 @@ class NoneType(Value):
 		return copy
 
 	def __str__(self):
-		return 'NoneType'
+		return 'None'
 
 	def __repr__(self):
-		return 'NoneType'
+		return 'None'
 
 NoneType.none = NoneType()
 
@@ -2098,13 +2098,13 @@ class Number(Value):
 		if isinstance(other, Number):
 			return Number(int(self.value == other.value)).set_context(self.context), None
 		else:
-			return Number(int(self.value == other.value)).set_context(self.context), None # Allow comparison with other types, e.g., 5 == "5" might be false
+			return None, Value.illegal_operation(self, other)
 
 	def get_comparison_ne(self, other):
 		if isinstance(other, Number):
 			return Number(int(self.value != other.value)).set_context(self.context), None
 		else:
-			return Number(int(self.value != other.value)).set_context(self.context), None # Allow comparison with other types
+			return None, Value.illegal_operation(self, other)
 
 	def get_comparison_lt(self, other):
 		if isinstance(other, Number):
@@ -2174,7 +2174,10 @@ class String(Value):
 		self.value = value
 
 	def added_to(self, other):
-		return String(self.value + str(other)).set_context(self.context), None
+		if isinstance(other, String):
+			return String(self.value + other.value).set_context(self.context), None
+		else:
+			return None, Value.illegal_operation(self, other)
 
 	def multed_by(self, other):
 		if isinstance(other, Number):
@@ -2198,7 +2201,7 @@ class String(Value):
 				)
 			try:
 				return String(self.value[other.value]).set_context(self.context), None
-			except IndexError:
+			except:
 				return None, RTError(
 					other.pos_start, other.pos_end,
 					'String index out of bounds',
@@ -2230,13 +2233,13 @@ class String(Value):
 		if isinstance(other, String):
 			return Number(int(self.value == other.value)).set_context(self.context), None
 		else:
-			return Number(int(self.value == str(other))).set_context(self.context), None
+			return None, Value.illegal_operation(self, other)
 
 	def get_comparison_ne(self, other):
 		if isinstance(other, String):
 			return Number(int(self.value != other.value)).set_context(self.context), None
 		else:
-			return Number(int(self.value != str(other))).set_context(self.context), None
+			return None, Value.illegal_operation(self, other)
 
 	def is_true(self):
 		return len(self.value) > 0
@@ -2273,7 +2276,7 @@ class List(Value):
 				)
 			new_list = self.copy()
 			try:
-				element = new_list.elements.pop(other.value)
+				new_list.elements.pop(other.value)
 				return new_list, None
 			except IndexError:
 				return None, RTError(
@@ -2301,7 +2304,7 @@ class List(Value):
 					self.context
 				)
 			try:
-				return self.elements[other.value].copy().set_pos(self.pos_start, self.pos_end).set_context(self.context), None
+				return self.elements[other.value], None
 			except IndexError:
 				return None, RTError(
 					other.pos_start, other.pos_end,
@@ -2320,9 +2323,8 @@ class List(Value):
 					self.context
 				)
 			try:
-				sliced_elements = [elem.copy() for elem in self.elements[::other.value]]
-				return List(sliced_elements).set_context(self.context).set_pos(self.pos_start, self.pos_end), None
-			except Exception:
+				return List(self.elements[::other.value]).set_context(self.context), None
+			except:
 				return None, RTError(
 					other.pos_start, other.pos_end,
 					'List slicing with step failed',
@@ -2350,7 +2352,7 @@ class List(Value):
 		return Number(1 - comparison_result.value).set_context(self.context), None
 
 	def copy(self):
-		copy = List([element.copy() for element in self.elements])
+		copy = List(self.elements)
 		copy.set_pos(self.pos_start, self.pos_end)
 		copy.set_context(self.context)
 		return copy
@@ -2359,7 +2361,7 @@ class List(Value):
 		return len(self.elements) > 0
 
 	def __str__(self):
-		return ", ".join([repr(x) for x in self.elements])
+		return ", ".join([str(x) for x in self.elements])
 
 	def __repr__(self):
 		return f'[{", ".join([repr(x) for x in self.elements])}]'
@@ -2371,12 +2373,15 @@ class BaseFunction(Value):
 
 	def generate_new_context(self):
 		new_context = Context(self.name, self.context, self.pos_start)
-		new_context.symbol_table = SymbolTable(self.context.symbol_table if self.context else None)
+		new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
 		return new_context
 
 
 	def check_args(self, arg_names, args):
 		res = RTResult()
+
+		if len(args) == 0:
+			return res.success(NoneType())
 
 		if len(args) > len(arg_names):
 			return res.failure(RTError(
@@ -2398,16 +2403,17 @@ class BaseFunction(Value):
 		for i in range(len(args)):
 			arg_name = arg_names[i]
 			arg_value = args[i]
-			exec_ctx.symbol_table.set(arg_name, arg_value.copy().set_context(exec_ctx))
+			arg_value.set_context(exec_ctx)
+			exec_ctx.symbol_table.set(arg_name, arg_value)
 
 	def check_and_populate_args(self, arg_names, args, exec_ctx):
 		res = RTResult()
-		check_res = self.check_args(arg_names, args)
-		if check_res.error:
-			return res.failure(check_res.error)
-
+		res.register(self.check_args(arg_names, args))
+		if res.should_return(): return res
 		self.populate_args(arg_names, args, exec_ctx)
-		return res.success(NoneType.none)
+		return res.success(None)
+	
+	
 
 class Function(BaseFunction):
 	def __init__(self, name, body_node, arg_names, should_auto_return):
@@ -2421,20 +2427,15 @@ class Function(BaseFunction):
 		interpreter = Interpreter()
 		exec_ctx = self.generate_new_context()
 
-		check_args_res = self.check_and_populate_args(self.arg_names, args, exec_ctx)
-		if check_args_res.should_return():
-			return check_args_res
+		res.register(self.check_and_populate_args(self.arg_names, args, exec_ctx))
+		if res.should_return(): return res
 
 		value = res.register(interpreter.visit(self.body_node, exec_ctx))
 
-		if res.func_return_value is not None:
-			return res
+		if res.should_return() and res.func_return_value == None: return res
 
-		if self.should_auto_return:
-			return res.success(value if value is not None else Number.null)
-
-		return res.success(Number.null)
-
+		ret_value = (value if self.should_auto_return else None) or res.func_return_value or Number.null
+		return res.success(ret_value)
 
 	def copy(self):
 		copy = Function(self.name, self.body_node, self.arg_names, self.should_auto_return)
@@ -2456,18 +2457,16 @@ class BuiltInFunction(BaseFunction):
 		method_name = f'execute_{self.name}'
 		method = getattr(self, method_name, self.no_visit_method)
 
-		check_args_res = self.check_and_populate_args(method.arg_names, args, exec_ctx)
-		if check_args_res.should_return():
-			return check_args_res
+		res.register(self.check_and_populate_args(method.arg_names, args, exec_ctx))
+		if res.should_return(): return res
 
 		return_value = res.register(method(exec_ctx))
-		if res.should_return():
-			return res
+		if res.should_return(): return res
 
 		return res.success(return_value)
 
 
-	def no_visit_method(self, context):
+	def no_visit_method(self, node, context):
 		raise Exception(f'No execute_{self.name} method defined')
 
 	def copy(self):
@@ -2483,13 +2482,12 @@ class BuiltInFunction(BaseFunction):
 
 	def execute_print(self, exec_ctx):
 		value = exec_ctx.symbol_table.get('value')
-		print(str(value))
+		print(f'{value}')
 		return RTResult().success(NoneType.none)
 	execute_print.arg_names = ['value']
 
 	def execute_print_ret(self, exec_ctx):
-		value = exec_ctx.symbol_table.get('value')
-		return RTResult().success(String(str(value)))
+		return RTResult().success(String(str(exec_ctx.symbol_table.get('value'))))
 	execute_print_ret.arg_names = ['value']
 
 	def execute_input(self, exec_ctx):
