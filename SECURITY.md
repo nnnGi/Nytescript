@@ -9,7 +9,7 @@ Currently being supported with security updates.
 | ------- | ------------------ |
 | Previews| :heavy_check_mark: |
 | Latest  | :heavy_check_mark: |
-| 0.8.x   | :man_shrugging:    |
+| 0.8.x   | Updates to 0.8.x   |
 | 0.7.x   | :x:                |
 
 ## Reporting a Vulnerability
