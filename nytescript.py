@@ -17,23 +17,8 @@ Nothing needs to be installed except the 'nytescript.py' file, preferably Python
 #######################################
 
 import string
-import os, sys, math
+import os, sys, math, subprocess
 import time
-import collections
-
-#######################################
-# EXTERNAL FUNCTIONS
-#######################################
-
-def tryimport(module):
-	if type(module) != str:
-		raise TypeError("Module was not of correct type")
-	else:
-		try:
-			return __import__(module)
-		except:
-			print(f'Module / Library {module} not found, installing now.')
-			os.system(f'pip install {module}')
 
 #######################################
 # CONSTANTS
@@ -123,6 +108,129 @@ class RTError(Error):
 			ctx = ctx.parent
 
 		return 'Traceback (most recent call last):\n' + result
+
+#######################################
+# STDLIB
+#######################################
+
+STDLIB = {
+	"python": """
+	pass
+""",
+	"math": """
+# Constants
+var pi = 3.1415926535897932384626433832795028841971693993751
+var e = 2.71828182845904523536028747135266249775724709369995
+var tau = 2 * pi
+
+# Simple Functions
+func add(a, b) -> a + b
+func sub(a, b) -> a - b
+func mul(a, b) -> a * b
+func div(a, b) -> a / b
+func pow(a, b) -> a ^ b
+func fdiv(a, b) -> a // b
+func mod(a, b) -> a % b
+func sqrt(n) -> n ^ (1/2)
+func cbrt(n) -> n ^ (1/3)
+func exp(n) -> e ^ x
+func floor(n) -> Number(n // 1)
+func ceil(n) -> if n % 1 == 0 then n else Number(n // 1) + 1
+func abs(n) -> if n > 0 then n else 0 - n
+
+# Complex Functions
+func gamma(n)
+	var torun = `math.gamma(${Number(n)})`
+	import python
+	return Number(Number(torun))
+end 
+
+func log2(n)
+	var torun = `math.log2(${Number(n)})`
+	import python
+	return Number(Number(torun))
+end 
+
+func log10(n)
+	var torun = `math.log10(${Number(n)})`
+	import python
+	return Number(Number(torun))
+end 
+
+func log(n, b)
+	var torun = `math.log10(${Number(n)})`
+	import python
+	var n = Number(Number(torun))
+
+	var torun = `math.log10(${Number(b)})`
+	import python
+	var b = Number(Number(torun))
+
+	return Number(n / b)
+end
+
+func factorial(n)
+	var result = 1
+	if n == 0 then
+		return 1
+	end
+
+	for i = 0 to n then
+		var result = result * (i + 1)
+	end
+	
+	return result
+end
+
+func comb(n, k)
+	if n == 0 then
+		return 0
+	end
+	if k == 0 then
+		return 0
+	end
+
+	var fn = 1
+	var fk = 1
+	var fnk = 1
+	for i = 0 to n then 
+		var fn = fn * (i + 1)
+	end
+	for i = 0 to k then 
+		var fk = fk * (i + 1)
+	end
+	for i = 0 to n - k then 
+		var fnk = fnk * (i + 1)
+	end
+
+    return Number(fn / (fk * fnk))
+end
+
+func fib(n)
+	if n < 0 then
+		return None
+	elif n // 1 != n then
+		return None
+	elif n <= 1 then
+		return n
+	else
+		var a = 0
+		var b = 1
+
+		for i = 2 to n + 1 then
+			var temp = a
+			var a = b
+			var b = temp + b
+		end
+
+		return b
+	end
+end 
+""",
+	"os": """
+
+"""
+}
 
 #######################################
 # POSITION
@@ -2158,8 +2266,6 @@ class Number(Value):
 Number.null = Number(0)
 Number.false = Number(0)
 Number.true = Number(1)
-Number.math_PI = Number(math.pi)
-Number.math_E = Number(math.e)
 
 class String(Value):
 	def __init__(self, value):
@@ -2519,28 +2625,6 @@ class BuiltInFunction(BaseFunction):
 		return RTResult().success(NoneType.none)
 	execute_exit.arg_names = []
 
-	def execute_sys_eval(self, exec_ctx):
-		command_value = exec_ctx.symbol_table.get('value')
-		if not isinstance(command_value, String):
-			return RTResult().failure(RTError(
-				self.pos_start, self.pos_end,
-				"Argument passed into sys_eval must be a String",
-				exec_ctx
-			))
-
-		command_string = command_value.value
-		try:
-			os.system(command_string)
-		except Exception as e:
-			return RTResult().failure(RTError(
-				self.pos_start, self.pos_end,
-				f"Failed to execute system command: {e}",
-				exec_ctx
-			))
-
-		return RTResult().success(NoneType.none)
-	execute_sys_eval.arg_names = ['value']
-
 	def execute_Number(self, exec_ctx):
 		data_value = exec_ctx.symbol_table.get('value')
 		try:
@@ -2860,7 +2944,6 @@ BuiltInFunction.String        = BuiltInFunction("String")
 BuiltInFunction.Number        = BuiltInFunction("Number")
 BuiltInFunction.List          = BuiltInFunction("List")
 BuiltInFunction.strcon        = BuiltInFunction("strcon")
-BuiltInFunction.sys_eval      = BuiltInFunction("sys_eval")
 BuiltInFunction.is_in         = BuiltInFunction("is_in")
 BuiltInFunction.is_number     = BuiltInFunction("is_number")
 BuiltInFunction.is_string     = BuiltInFunction("is_string")
@@ -2873,12 +2956,13 @@ BuiltInFunction.extend        = BuiltInFunction("extend")
 BuiltInFunction.len		   	  = BuiltInFunction("len")
 BuiltInFunction.run			  = BuiltInFunction("run")
 BuiltInFunction.exit          = BuiltInFunction("exit")
-# BuiltInFunction.cached_func = BuiltInFunction("cached_func")
 
 class ModuleValue(Value):
 	def __init__(self, name, symbol_table):
 		super().__init__()
+		self.in_stdlib = False
 		self.name = name
+		if self.name in STDLIB: self.in_stdlib = True
 		self.symbol_table = symbol_table
 
 	def get_member(self, name):
@@ -2898,10 +2982,10 @@ class ModuleValue(Value):
 		return copy
 
 	def __str__(self):
-		return f"<Module {self.name}>"
+		return f"<{'Stdlib' if self.in_stdlib else 'Module'} {self.name}>"
 
 	def __repr__(self):
-		return f"<Module {self.name}>"
+		return f"<{'Stdlib' if self.in_stdlib else 'Module'} {self.name}>"
 
 
 #######################################
@@ -3308,7 +3392,52 @@ class Interpreter:
 			if current_ctx.symbol_table and current_ctx.symbol_table.get(module_name) is not None:
 				return res.success(current_ctx.symbol_table.get(module_name))
 			current_ctx = current_ctx.parent
+			
+		if module_name in STDLIB:
+			if module_name == 'python':
+				var_name = 'torun'
+				value = context.symbol_table.get(var_name)
 
+				if not value:
+					return res.failure(RTError(
+						node.pos_start, node.pos_end,
+						f"'{var_name}' is not defined",
+						context
+					))
+
+				process = subprocess.Popen(['python'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+				stdout, stderr = process.communicate(input= f'import math, random, time, os, sys, re\nprint({value})')
+				stdout = stdout.removesuffix('\n')
+
+				if stderr:
+					return res.failure(RTError(
+						node.pos_start, node.pos_end,
+						f"Failed to run Subprocess",
+						context
+					))
+
+
+				context.symbol_table.set(var_name, String(stdout))
+				return res.success(stdout) 
+			
+			else:
+				script = STDLIB[module_name]
+				module_context = Context(f"<STDLIB {module_name}>", context, node.pos_start)
+				module_context.symbol_table = SymbolTable(global_symbol_table)
+				module_result_value, module_error = run(filename, script, context=module_context)
+
+				if module_error:
+					return res.failure(RTError(
+						node.pos_start, node.pos_end,
+						f"Error importing module '{module_name}':\n{module_error.as_string()}",
+						context
+				))
+
+				module_value = ModuleValue(module_name, module_context.symbol_table).set_context(context).set_pos(node.pos_start, node.pos_end)
+
+				context.symbol_table.set(module_name, module_value)
+
+				return res.success(module_value)
 
 		try:
 			with open(filename, "r") as f:
@@ -3372,8 +3501,6 @@ global_symbol_table.set(SYMBOL_TABLE[0], Number.null)
 global_symbol_table.set(SYMBOL_TABLE[1], Number.false)
 global_symbol_table.set(SYMBOL_TABLE[2], Number.true)
 global_symbol_table.set(SYMBOL_TABLE[3], NoneType.none)
-global_symbol_table.set("math_pi", Number.math_PI)
-global_symbol_table.set("math_e", Number.math_E)
 global_symbol_table.set("print", BuiltInFunction.print)
 global_symbol_table.set("print_ret", BuiltInFunction.print_ret)
 global_symbol_table.set("input", BuiltInFunction.input)
@@ -3385,7 +3512,6 @@ global_symbol_table.set("Number", BuiltInFunction.Number)
 global_symbol_table.set("String", BuiltInFunction.String)
 global_symbol_table.set("List", BuiltInFunction.List)
 global_symbol_table.set("strcon", BuiltInFunction.strcon)
-global_symbol_table.set("sys_eval", BuiltInFunction.sys_eval)
 global_symbol_table.set("is_in", BuiltInFunction.is_in)
 global_symbol_table.set("is_num", BuiltInFunction.is_number)
 global_symbol_table.set("is_str", BuiltInFunction.is_string)
