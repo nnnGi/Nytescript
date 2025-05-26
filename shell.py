@@ -63,13 +63,18 @@ def shell() -> None:
 				print(repr(result))
 
 @lru_cache
-def intepreter(file) -> None:
-	result, error = nytescript.run('<program>', f'run(\'{file}\')')
-
-	if error:
-		print(error.as_string())
-	elif result:
-		...
+def intepreter(fn) -> None:
+	try:
+		with open(fn, "r") as f:
+			script = f.read()
+			if not script.strip() == '':
+				_, error = nytescript.run('<program>', script)
+				if error:
+					print(error.as_string())
+	except FileNotFoundError:
+		print(f"Failed to load script \"{fn}\": File not found")
+	except Exception as e:
+		print(f"Failed to load script \"{fn}\": {e}")	
 
 def cli() -> None:
 	if len(sys.argv) == 1:
