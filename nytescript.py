@@ -86,6 +86,29 @@ class InvalidSyntaxError(Error):
 	def __init__(self, pos_start, pos_end, details=''):
 		super().__init__(pos_start, pos_end, 'Invalid Syntax', details)
 
+class RecursiveError(Error):
+	def __init__(self, pos_start, pos_end, details, context):
+		super().__init__(pos_start, pos_end, 'Recursion Error', details)
+		self.context = context
+
+	def as_string(self):
+		result    = self.generate_traceback()
+		result += f'{self.error_name}: {self.details}'
+		result += '\n\n' + self.string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end)
+		return result
+
+	def generate_traceback(self):
+		result = ''
+		pos = self.pos_start
+		ctx = self.context
+
+		while ctx:
+			result = f'    File {pos.fn}, line {str(pos.ln + 1)}, in {ctx.display_name}\n' + result
+			pos = ctx.parent_entry_pos
+			ctx = ctx.parent
+
+		return 'Recursive Traceback (most recent call last):\n' + result
+
 class RTError(Error):
 	def __init__(self, pos_start, pos_end, details, context):
 		super().__init__(pos_start, pos_end, 'Runtime Error', details)
@@ -3314,25 +3337,32 @@ class Interpreter:
 		res = RTResult()
 		args = []
 
-		value_to_call = res.register(self.visit(node.node_to_call, context))
-		if res.should_return(): return res
-		value_to_call = value_to_call.copy().set_pos(node.pos_start, node.pos_end)
-
-		if not isinstance(value_to_call, BaseFunction):
-			return res.failure(RTError(
-				node.node_to_call.pos_start, node.node_to_call.pos_end,
-				f"Cannot call value of type '{type(value_to_call).__name__}'. Expected a function.",
-				context
-			))
-
-		for arg_node in node.arg_nodes:
-			args.append(res.register(self.visit(arg_node, context)))
+		try:
+			value_to_call = res.register(self.visit(node.node_to_call, context))
 			if res.should_return(): return res
+			value_to_call = value_to_call.copy().set_pos(node.pos_start, node.pos_end)
 
-		return_value = res.register(value_to_call.execute(args))
-		if res.should_return(): return res
-		return_value = return_value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
-		return res.success(return_value)
+			if not isinstance(value_to_call, BaseFunction):
+				return res.failure(RTError(
+					node.node_to_call.pos_start, node.node_to_call.pos_end,
+					f"Cannot call value of type '{type(value_to_call).__name__}'. Expected a function.",
+					context
+				))
+
+			for arg_node in node.arg_nodes:
+				args.append(res.register(self.visit(arg_node, context)))
+				if res.should_return(): return res
+
+			return_value = res.register(value_to_call.execute(args))
+			if res.should_return(): return res
+			return_value = return_value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
+			return res.success(return_value)
+		except RecursionError:
+			return res.failure(RecursiveError(
+				node.node_to_call.pos_start, node.node_to_call.pos_end,
+					f"Exceeded Call Stack Size: {sys.getrecursionlimit()}",
+					context
+			))
 
 	def visit_ReturnNode(self, node, context):
 		res = RTResult()
