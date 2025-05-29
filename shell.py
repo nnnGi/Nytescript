@@ -14,7 +14,7 @@ Nothing needs to be installed except the ```nytescript.py``` and ```shell.py``` 
 
 import nytescript
 import os, sys, platform
-from functools import lru_cache
+from functools import cache
 
 if sys.platform != 'win32':
 	try:
@@ -33,7 +33,7 @@ if sys.platform != 'win32':
 	except:
 		pass
 
-@lru_cache
+@cache
 def shell() -> None:
 	os.system('clear' if os.name == 'posix' else 'cls')
 	INTEPRETER_LANG = sys.version.split(' [')[0]
@@ -62,7 +62,7 @@ def shell() -> None:
 			else:
 				print(repr(result))
 
-@lru_cache
+@cache
 def intepreter(fn) -> None:
 	try:
 		with open(fn, "r") as f:
@@ -73,6 +73,8 @@ def intepreter(fn) -> None:
 					print(error.as_string())
 	except FileNotFoundError:
 		print(f"Failed to load script \"{fn}\": File not found")
+	except PermissionError:
+		print(f"Failed to open script \"{fn}\": Lacking Permissions")
 	except Exception as e:
 		print(f"Failed to load script \"{fn}\": {e}")	
 
