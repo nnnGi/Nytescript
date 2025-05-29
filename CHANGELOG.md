@@ -7,14 +7,18 @@
 - Added F-Strings with ``` ` ``` and have statements inside of ```${}```
 - Added Pass Statement (No-Op)
 
+## Standard Library
+- Modified ```import``` statement to include a Standard Library, currently includes:
+  - ```math``` Library
+  - ```random``` Library
+
 ## Speed + Memory
-- Decorated with Least Recently Used Cache from ```functools``` ```lru_cache```:
-  - Nytescript Shell
-  - Nytescript File Intepreter
-  - Nytescript Script Runner
+- Sped Up Intepreter using an LRU_CACHE
  
 ## Internal Errors
-- Error Messages for Runtime Error (RTError) have the strings with arrows function inside the object itself
+- Error Messages for Runtime Errors optimised
+- Added Recursion Error (RecursiveError)
+- Made Error Messages in ran files using the CLI show error messages properly
 
 # 🐞 Bug Fixes:
 None
