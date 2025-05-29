@@ -12,6 +12,9 @@
   - ```math``` Library
   - ```random``` Library
 
+## Functions
+- Removed ```sys_eval()```
+
 ## Speed + Memory
 - Sped Up Intepreter using an LRU_CACHE
  
