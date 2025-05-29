@@ -227,8 +227,30 @@ func fib(n)
 	end
 end 
 """,
-	"os": """
+	"random": """
+func rand()
+	var torun = 'random.random()'
+	import python
+	return Number(torun)
+end
 
+func randint(a, b)
+	var torun = `random.randint(${a}, ${b})`
+	import python
+	return Number(torun)
+end
+
+func uniform(a, b)
+	var torun = `random.uniform(${a}, ${b})`
+	import python
+	return Number(torun)
+end
+
+func randrange(start, stop, ste)
+	var torun = `random.randrange(${start}, ${stop}, ${ste})`
+	import python
+	return Number(torun)
+end
 """
 }
 
@@ -3405,20 +3427,26 @@ class Interpreter:
 						context
 					))
 
-				process = subprocess.Popen(['python'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-				stdout, stderr = process.communicate(input= f'import math, random, time, os, sys, re\nprint({value})')
-				stdout = stdout.removesuffix('\n')
-
-				if stderr:
+				executable = f'''import math, random, time, datetime, os, sys, re, json, platform
+print({value})'''
+				try:
+					result = subprocess.run(
+            			[sys.executable, "-c", executable],
+            			capture_output=True,
+            			text=True,
+            			check=True
+       				)
+					result = result.stdout.removesuffix('\n')
+				except subprocess.CalledProcessError as e:
 					return res.failure(RTError(
 						node.pos_start, node.pos_end,
-						f"Failed to run Subprocess",
+						f"Failed to run Subprocess, {e.stderr}",
 						context
 					))
 
 
-				context.symbol_table.set(var_name, String(stdout))
-				return res.success(stdout) 
+				context.symbol_table.set(var_name, String(result))
+				return res.success(result) 
 			
 			else:
 				script = STDLIB[module_name]
