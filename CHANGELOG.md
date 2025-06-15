@@ -24,6 +24,6 @@
 - Made Error Messages in ran files using the CLI show error messages properly
 
 # 🐞 Bug Fixes:
-None
+Fixed bug #26
 
 ## Every File is provided
