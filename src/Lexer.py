@@ -3,7 +3,7 @@ from ConstantData import DIGITS, LETTERS, LETTERS_DIGITS
 from Tokens import *
 
 #######################################
-# TOKENS
+# TOKENS & KEYWORDS
 #######################################
 
 KEYWORDS = [
