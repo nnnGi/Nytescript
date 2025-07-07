@@ -7,7 +7,7 @@ It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by
 '''
 
 import ConstantData
-import Interpreter
+import Runtime
 import os, sys, platform
 from functools import cache
 
@@ -45,7 +45,7 @@ def shell() -> None:
 			continue
 
 		if text.strip() == "": continue
-		result, error = Interpreter.run('<stdin>', text)
+		result, error = Runtime.run('<stdin>', text)
 		if error:
 			print(error.as_string())
 		elif result:
@@ -63,7 +63,7 @@ def intepreter(fn) -> None:
 		with open(fn, "r") as f:
 			script = f.read()
 			if not script.strip() == '':
-				_, error = Interpreter.run('<program>', script)
+				_, error = Runtime.run('<program>', script)
 				if error:
 					print(error.as_string())
 	except FileNotFoundError:

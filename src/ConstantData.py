@@ -94,6 +94,13 @@ func log(n, b)
 	return Number(n / b)
 end
 
+func ln(n)
+	var torun = `math.log(${Number(n)})`
+	import python
+	var n = Number(Number(torun))
+	return n
+end
+
 func factorial(n)
 	var result = 1
 	if n == 0 then
