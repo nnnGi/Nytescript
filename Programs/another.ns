@@ -1,0 +1,9 @@
+# This is a program that can sort numbers
+func sort(l)
+	for i = 0 to len(l) then
+		if not is_num(l/i) then
+			return 'Failed'
+		end
+	end
+	return sorted(l, False)
+end
