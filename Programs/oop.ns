@@ -1,0 +1,47 @@
+class Point
+    func __init__(self, x, y)
+        self.x = x  
+        self.y = y  
+        print("Point initialized!")
+    end
+
+    func display(self)
+        print(`Point(x=${self.x}, y=${self.y})`)
+    end
+
+    func move(self, dx, dy)
+        self.x = self.x + dx
+        self.y = self.y + dy
+        return self
+    end
+
+    func __str__(self)
+        return `Custom String: Point x:${self.x}, y:${self.y}`
+    end
+end
+
+print("Creating p1...")
+var p1 = Point(10, 20)
+p1.display()
+
+print("Accessing p1.x directly:")
+print(p1.x)
+
+print("Modifying p1.x...")
+p1.x = 100
+p1.display()
+
+print("Moving p1...")
+p1.move(5, -5)
+p1.display()
+
+print("String conversion of p1:")
+print(p1)
+
+var p2 = Point(1, 2)
+print(p2)
+
+# Test that 'self' works correctly and methods belong to instances
+p1.move(1000, 0)
+p1.display()
+p2.display()
