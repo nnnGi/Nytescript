@@ -12,8 +12,8 @@ It is a simple, interpreted esoteric programming language (esolang) implemented 
 ### Installation
 1.  Clone or download the Nytescript repository:
     ```zsh
-    git clone [https://github.com/nnnGi/nytescript.git](https://www.google.com/search?q=https://github.com/nnnGi/nytescript.git)
-    cd nytescript
+    git clone https://github.com/nnnGi/Nytescript.git
+    cd Nytescript
     ```
 2. (Optional) Create a virtual environment:
     ```zsh
