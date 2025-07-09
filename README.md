@@ -10,18 +10,8 @@ It is a simple, interpreted esoteric programming language (esolang) implemented 
 * **Python 3.12 or higher:** Ensure you have Python installed on your system. You can download it from [Python Downloads](https://www.python.org/downloads/).
 
 ### Installation
-1.  Clone or download the Nytescript repository:
-    ```zsh
-    git clone [https://github.com/nnnGi/nytescript.git](https://www.google.com/search?q=https://github.com/nnnGi/nytescript.git)
-    cd nytescript
-    ```
-2. (Optional) Create a virtual environment:
-    ```zsh
-	python -m venv venv
-    source venv/bin/activate  # On Linux/MacOS
-    venv\Scripts\activate  # On Windows
-    ```
-3. Run ```shell.py``` from Python without arguments for the shell, and provide the filename of a Nytescript (.ns) file that you want to run as an argument in the ```python shell.py example.ns``` format OR install the CLI from setup files provided and use the CLI universally with ```nytescript example.ns```
+1.  Download Executable for Respective OS
+2. (Optional) Add to Path
 
 Notes: No libraries apart from the standard library are used
 
