@@ -1459,7 +1459,7 @@ class Interpreter:
 		return RTResult().success_break()
 
 	def visit_PassNode(self, node, context):
-		return RTResult().success(Number.null)
+		return RTResult().success(NoneType.none)
 
 	def visit_SwitchNode(self, node, context):
 		res = RTResult()

@@ -32,7 +32,7 @@ if sys.platform != 'win32':
 def shell() -> None:
 	os.system('clear' if os.name == 'posix' else 'cls')
 	INTEPRETER_LANG = sys.version.split(' [')[0]
-	BOOT_INFO = f'Nytescript {ConstantData.VERSION} [Python {INTEPRETER_LANG}] on {platform.system() if platform.system() != "Darwin" else "Darwin (MacOS)"}'
+	BOOT_INFO = f'Nytescript {ConstantData.VERSION} [Python {INTEPRETER_LANG}] on {platform.system() if platform.system() != "Darwin" else "Darwin (MacOS)"}\nType "license" for more information and "exit" to quit'
 
 	print(BOOT_INFO)
 	while True:

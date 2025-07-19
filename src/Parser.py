@@ -1,4 +1,5 @@
 from Errors import InvalidSyntaxError
+from ConstantData import LICENSE
 from Lexer import *
 from Nodes import *
 
@@ -147,6 +148,12 @@ class Parser:
 			res.register_advancement()
 			self.advance()
 			return res.success(ExitNode(pos_start, self.current_tok.pos_start.copy()))
+		
+		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[27]):
+			res.register_advancement()
+			self.advance()
+			print(LICENSE)
+			return res.success(PassNode(pos_start, self.current_tok.pos_start.copy()))
 
 		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[21]):
 			try_except_node = res.register(self.try_except_expr())
