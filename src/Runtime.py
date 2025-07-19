@@ -1,6 +1,6 @@
-from Errors import RTError, RecursiveError
+from Errors import RTError, RecursiveError, KeyboardInterrupted
 from Parser import Parser, RTResult
-from Lexer import Lexer, Token, KEYWORDS, SYMBOL_TABLE
+from Lexer import Lexer, Token, Position, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
 from ConstantData import FILE_EXTENSION, STDLIB, os, sys, subprocess
 
@@ -450,10 +450,8 @@ class BaseFunction(Value):
 		self.name = name or "<anonymous>"
 
 	def generate_new_context(self):
-		# print(f"DEBUG: BaseFunction.generate_new_context for '{self.name}'. Func Def Context ID: {id(self.context)}. Func Def ST ID: {id(self.context.symbol_table) if self.context else 'None'}")
 		new_context = Context(self.name, self.context, self.pos_start)
 		new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
-		# print(f"DEBUG: BaseFunction.generate_new_context: New Exec ST ID: {id(new_context.symbol_table)}. New Exec ST Parent ID: {id(new_context.symbol_table.parent)}")
 		return new_context
 
 
@@ -508,29 +506,20 @@ class Function(BaseFunction):
 		res.register(self.check_and_populate_args(self.arg_names, args, exec_ctx))
 		if res.should_return(): return res
 
-		# Visit the body of the function
 		body_execution_result = interpreter.visit(self.body_node, exec_ctx)
 		
-		# Register the result of the body execution with the current RTResult
-		# This will transfer error, func_return_value, loop_should_continue/break
 		res.register(body_execution_result) 
 
-		# If the body execution resulted in an error or control flow (continue/break/return)
-		# and it's not a return with a None value, propagate it immediately.
-		# This check is important for early exits from functions/loops.
-		if res.should_return() and res.func_return_value is None: # Only propagate if it's a non-value return
-			return res # This res already has the correct func_return_value or error/flow control
+		if res.should_return() and res.func_return_value is None:
+			return res
 
-		# Determine the final return value
-		final_return_value = NoneType.none # Default to NoneType.none
+		final_return_value = NoneType.none
 
-		if self.should_auto_return: # For arrow functions (e.g., func add(a,b) -> a + b)
-			# If auto-return is true, the value from the body is the return value
+		if self.should_auto_return:
 			final_return_value = body_execution_result.value 
-		elif res.func_return_value is not None: # If there was an explicit 'return' statement
+		elif res.func_return_value is not None:
 			final_return_value = res.func_return_value
 		
-		# If no explicit return and no auto-return, it implicitly returns NoneType.none
 		return res.success(final_return_value)
 
 	def copy(self):
@@ -618,9 +607,16 @@ class BuiltInFunction(BaseFunction):
 	execute_clear.arg_names = []
 
 	def execute_exit(self, exec_ctx):
-		sys.exit()
-		return RTResult().success(NoneType.none)
-	execute_exit.arg_names = []
+		exit_code = exec_ctx.symbol_table.get('value')
+		if isinstance(exit_code, Number):
+			if exit_code.value in range(0, 256):
+				exit(exit_code.value)
+		return RTResult().failure(RTError(
+			self.pos_start, self.pos_end,
+			f"Exit Code: {exit_code} is not a valid error code.",
+			exec_ctx
+		))
+	execute_exit.arg_names = ['value']
 
 	def execute_Number(self, exec_ctx):
 		data_value = exec_ctx.symbol_table.get('value')
@@ -1048,17 +1044,14 @@ class ModuleValue(Value):
 		if self.name in STDLIB: self.in_stdlib = True
 		self.symbol_table = symbol_table
 
-	def get_member(self, name_tok): # Changed 'name' to 'name_tok'
-		value = self.symbol_table.get(name_tok.value) # Access value from symbol table using name_tok.value
+	def get_member(self, name_tok):
+		value = self.symbol_table.get(name_tok.value)
 		if value is None:
 			return None, RTError(
-				name_tok.pos_start, name_tok.pos_end, # Use name_tok's position for error
+				name_tok.pos_start, name_tok.pos_end,
 				f"Member '{name_tok.value}' not found in module '{self.name}'",
 				self.context, "AttributeError"
 			)
-		# IMPORTANT: Do NOT overwrite the context of the copied value here.
-		# The value.copy() method (e.g., Function.copy()) is responsible for
-		# preserving the original defining context.
 		copied_value = value.copy().set_pos(name_tok.pos_start, name_tok.pos_end)
 		return copied_value, None
 
@@ -1102,12 +1095,9 @@ class SymbolTable:
 		self.parent = parent
 
 	def get(self, name):
-		# print(f"DEBUG: SymbolTable.get: Trying to get '{name}'. Current ST ID: {id(self)}. Parent ST ID: {id(self.parent) if self.parent else 'None'}")
 		value = self.symbols.get(name, None)
 		if value is None and self.parent:
-			# print(f"DEBUG: SymbolTable.get: '{name}' not in current ST, trying parent.")
 			return self.parent.get(name)
-		# print(f"DEBUG: SymbolTable.get: Found '{name}'? {'Yes' if value else 'No'}. Keys in current ST: {list(self.symbols.keys())}")
 		return value
 
 	def set(self, name, value):
@@ -1199,9 +1189,7 @@ class Interpreter:
 				f"'{var_name}' is not defined",
 				context
 			))
-
-		# FIX: Do not copy NytescriptInstance objects when accessing them.
-		# This ensures methods operate on the original instance, not a copy.
+		
 		if isinstance(value, NytescriptInstance):
 			value.set_pos(node.pos_start, node.pos_end).set_context(context)
 		else:
@@ -1406,7 +1394,6 @@ class Interpreter:
 		body_node = node.body_node
 		arg_names = [arg_name.value for arg_name in node.arg_name_toks]
 		func_value = Function(func_name, body_node, arg_names, node.should_auto_return).set_context(context).set_pos(node.pos_start, node.pos_end)
-		# print(f"DEBUG: visit_FuncDefNode: Defined func '{func_name}'. Def Context ID: {id(context)}. Def ST ID: {id(context.symbol_table)}. Func obj context ID: {id(func_value.context)}")
 		if node.var_name_tok:
 			context.symbol_table.set(func_name, func_value)
 
@@ -1417,12 +1404,10 @@ class Interpreter:
 		args = []
 
 		try:
-			# Store the original value_to_call to check its type later
 			original_callable_node = node.node_to_call 
 			value_to_call = res.register(self.visit(original_callable_node, context))
 			if res.should_return(): return res
 			
-			# Keep track of whether the callable was a class
 			was_class_call = isinstance(value_to_call, NytescriptClass)
 
 
@@ -1444,11 +1429,8 @@ class Interpreter:
 			
 			if isinstance(final_value_from_call, Value):
 				if was_class_call:
-					# If it was a class call, final_value_from_call is the new instance.
-					# Just set its position and context, DO NOT copy it again.
 					final_value_from_call.set_pos(node.pos_start, node.pos_end).set_context(context)
 				else:
-					# For regular function calls, copy the return value as before
 					final_value_from_call = final_value_from_call.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
 			
 			return res.success(final_value_from_call)
@@ -1639,17 +1621,12 @@ class Interpreter:
 	def visit_MemberAssignNode(self, node, context):
 		res = RTResult()
 		
-		# Visit the object part (e.g., 'obj' in 'obj.attr = value')
 		object_value = res.register(self.visit(node.object_node, context))
 		if res.should_return(): return res
 		
-		# Visit the value part (e.g., 'value' in 'obj.attr = value')
 		value_to_assign = res.register(self.visit(node.value_node, context))
 		if res.should_return(): return res
 
-		# 'object_value' is a Nytescript runtime value (e.g., NytescriptInstance)
-		# Call its set_member method
-		# set_member in NytescriptInstance expects name_tok (Token) and the value (Nytescript Value)
 		error = object_value.set_member(node.member_name_tok, value_to_assign)
 		
 		if error:
@@ -1727,10 +1704,11 @@ def run(fn, text, context=None, new_context=False):
 		context = Context('<module>', context, None)
 		context.symbol_table = SymbolTable(context.parent.symbol_table)
 
-
-	result = interpreter.visit(ast.node, context)
-
-	return result.value, result.error
+	try:
+		result = interpreter.visit(ast.node, context)
+		return result.value, result.error
+	except KeyboardInterrupt:
+		return NoneType.none, KeyboardInterrupted(Position(0, 0, 0, fn, text), Position(0, 0, 0, fn, text))
 
 if __name__ == __name__:
 	symbols()

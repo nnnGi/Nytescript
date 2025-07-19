@@ -33,6 +33,7 @@ KEYWORDS = [
 	'import',   # 23 Import Statement
 	'pass',     # 24 Pass Statement (No-Op)
 	'class',    # 25 Class Declaration
+	'exit',     # 26 Exit Statement
 ]
 
 SYMBOL_TABLE = [
@@ -413,7 +414,10 @@ class Lexer:
 	def skip_comment(self):
 		self.advance()
 
-		while self.current_char != '\n':
-			self.advance()
+		try:
+			while self.current_char != '\n':
+				self.advance()
+		except KeyboardInterrupt:
+			pass
 
 		self.advance()

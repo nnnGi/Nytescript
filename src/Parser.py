@@ -42,9 +42,6 @@ class ParseResult:
 			self.error = error
 		return self
 
-	# def should_return(self):
-	# 	return self.error is not None
-
 #######################################
 # PARSER -> AST
 #######################################
@@ -145,6 +142,11 @@ class Parser:
 			res.register_advancement()
 			self.advance()
 			return res.success(PassNode(pos_start, self.current_tok.pos_start.copy()))
+		
+		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[26]):
+			res.register_advancement()
+			self.advance()
+			return res.success(ExitNode(pos_start, self.current_tok.pos_start.copy()))
 
 		if self.current_tok.matches(TT_KEYWORD, KEYWORDS[21]):
 			try_except_node = res.register(self.try_except_expr())
@@ -333,7 +335,7 @@ class Parser:
 		res = ParseResult()
 		pos_start = self.current_tok.pos_start.copy()
 
-		if not self.current_tok.matches(TT_KEYWORD, KEYWORDS[25]): # CLASS
+		if not self.current_tok.matches(TT_KEYWORD, KEYWORDS[25]):
 			return res.failure(InvalidSyntaxError(
 				self.current_tok.pos_start, self.current_tok.pos_end,
 				f"Expected '{KEYWORDS[25]}'"
