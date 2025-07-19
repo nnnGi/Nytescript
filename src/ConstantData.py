@@ -18,7 +18,7 @@ FILE_EXTENSION = '.ns'
 LICENSE = """
 MIT License
 
-Copyright (c) 2025 _nnn_ and David Callanan
+Copyright (c) 2025 __nnn__ and David Callanan
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
