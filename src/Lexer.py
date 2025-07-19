@@ -34,6 +34,7 @@ KEYWORDS = [
 	'pass',     # 24 Pass Statement (No-Op)
 	'class',    # 25 Class Declaration
 	'exit',     # 26 Exit Statement
+	'license',  # 27 See License
 ]
 
 SYMBOL_TABLE = [
