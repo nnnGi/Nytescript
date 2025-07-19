@@ -174,6 +174,12 @@ class PassNode:
 		self.pos_start = pos_start
 		self.pos_end = pos_end
 
+class ExitNode:
+	def __init__(self, pos_start, pos_end):
+		self.pos_start = pos_start
+		self.pos_end = pos_end
+		exit(0)
+
 class ImportNode:
 	def __init__(self, module_name_tok):
 		self.module_name_tok = module_name_tok

@@ -13,7 +13,7 @@ import time
 DIGITS = '0123456789'
 LETTERS = string.ascii_letters + '_'
 LETTERS_DIGITS = LETTERS + DIGITS
-VERSION = '0.8.6'
+VERSION = '0.8.7'
 FILE_EXTENSION = '.ns'
 
 #######################################
@@ -201,4 +201,5 @@ func getat(str, idx)
 	return str / idx
 end
 """,
+	"ns": "pass",
 }
