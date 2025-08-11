@@ -35,6 +35,7 @@ KEYWORDS = [
 	'class',    # 25 Class Declaration
 	'exit',     # 26 Exit Statement
 	'license',  # 27 See License
+	'include',  # 28 Include Statement
 ]
 
 SYMBOL_TABLE = [
@@ -51,19 +52,20 @@ SYMBOL_TABLE = [
 	'Number',      # 10
 	'String',      # 11
 	'List',        # 12
-	'strcon',      # 13
-	'is_in',       # 14
-	'is_num',      # 15
-	'is_str',      # 16
-	'is_list',     # 17
-	'is_function', # 18
-	'sorted',      # 19
-	'append',      # 20
-	'pop',         # 21
-	'extend',      # 22
-	'len',         # 23
-	'run',         # 24
-	'exit',        # 25
+	'Bool',        # 13
+	'strcon',      # 14
+	'is_in',       # 15
+	'is_num',      # 16
+	'is_str',      # 17
+	'is_list',     # 18
+	'is_function', # 19
+	'sorted',      # 20
+	'append',      # 21
+	'pop',         # 22
+	'extend',      # 23
+	'len',         # 24
+	'run',         # 25
+	'exit',        # 26
 ]
 
 class Token:
@@ -136,7 +138,10 @@ class Lexer:
 				case self.current_char if self.current_char in ' \t':
 					self.advance()
 				case self.current_char if self.current_char in '#£¥€':
-					self.skip_comment()
+					try:
+						self.skip_comment()
+					except KeyboardInterrupt:
+						self.advance()
 				case self.current_char if self.current_char in ';\n':
 					tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
 					self.advance()
@@ -416,9 +421,12 @@ class Lexer:
 		self.advance()
 
 		try:
-			while self.current_char != '\n':
-				self.advance()
+			while self.current_char != ('\n' or None or ''):
+				try:
+					self.advance()
+				except KeyboardInterrupt:
+					break
 		except KeyboardInterrupt:
 			pass
-
+		
 		self.advance()

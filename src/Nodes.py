@@ -1,3 +1,5 @@
+from ConstantData import sys
+
 #######################################
 # NODES
 #######################################
@@ -31,7 +33,6 @@ class TemplateStringNode:
 
 	def __repr__(self):
 		return f'TemplateString({self.segments})'
-
 
 class ListNode:
 	def __init__(self, element_nodes, pos_start, pos_end):
@@ -178,9 +179,16 @@ class ExitNode:
 	def __init__(self, pos_start, pos_end):
 		self.pos_start = pos_start
 		self.pos_end = pos_end
-		exit(0)
+		sys.exit()
 
 class ImportNode:
+	def __init__(self, module_name_tok):
+		self.module_name_tok = module_name_tok
+
+		self.pos_start = self.module_name_tok.pos_start
+		self.pos_end = self.module_name_tok.pos_end
+
+class IncludeNode:
 	def __init__(self, module_name_tok):
 		self.module_name_tok = module_name_tok
 

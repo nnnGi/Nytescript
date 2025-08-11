@@ -223,6 +223,55 @@ func getat(str, idx)
 	if is_num(idx) != True then; return None; end
 	return str / idx
 end
+
+func removeprefix(str, item)
+	var torun = `'${str}'.removeprefix('${item}')`
+	import python
+	return torun
+end
+
+func removesuffix(str, item)
+	var torun = `'${str}'.removesuffix('${item}')`
+	import python
+	return torun
+end
 """,
-	"ns": "pass",
+	"fm": """
+class File
+	func __init__(self, path)
+		self.path = path
+		var torun = `file = open("${self.path}", 'x')\nfile.close()`
+		import python
+		self.read()
+	end
+
+	func read(self)
+		var torun = `file = open("${self.path}")\nfile.read()\nfile.close()`
+		import python
+		self.text = torun
+		return self.text
+	end
+
+	func append(self, new_text)
+		self.text = self.text + `\n${new_text}`
+		var torun = `file = open("${self.path}", 'a')\nfile.write("\\n${new_text}")\nfile.close()`
+		import python
+	end
+
+	func write(self, new_text)
+		self.text = new_text
+		var torun = `file = open("${self.path}", 'w')\nfile.write("${new_text}")\nfile.close()`
+		import python
+	end
+
+	func __str__(self)
+		return `File located at ${self.path}`
+	end
+end
+
+func removefile(path)
+	var torun = `if os.path.exists("${path}"): os.remove("${path}")\n`
+	import python
+end
+""",
 }
