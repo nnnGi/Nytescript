@@ -1,9 +1,9 @@
 '''
-Nytescript Shell and Interpreter, written by @_nnn_ in Python 3.12.9, 3.13.2 and 3.13.3
+Nytescript Shell and Interpreter, written by @_nnn_ in Python 3.12.9, 3.13.2, 3.13.3 and 3.13.5
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 
-© Copyright @_nnn_ 2025 - 2025
+© Copyright @__nnn__ 2025 - 2025
 '''
 
 import ConstantData
@@ -30,15 +30,15 @@ if sys.platform != 'win32':
 
 @cache
 def shell() -> None:
-	os.system('clear' if os.name == 'posix' else 'cls')
 	INTEPRETER_LANG = sys.version.split(' [')[0]
-	BOOT_INFO = f'Nytescript {ConstantData.VERSION} [Python {INTEPRETER_LANG}] on {platform.system() if platform.system() != "Darwin" else "Darwin (MacOS)"}\nType "license" for more information and "exit" to quit'
+	BOOT_INFO = f'Nytescript {ConstantData.VERSION} [Python {INTEPRETER_LANG}] on {platform.system() if platform.system() != "Darwin" else "Darwin (MacOS)"}\nType "license" or "help" for more information and "exit" to quit'
 
 	print(BOOT_INFO)
 	while True:
 		try:
 			text = input("❯ ")
 		except EOFError:
+			print()
 			break
 		except KeyboardInterrupt:
 			print("^C")
@@ -50,10 +50,18 @@ def shell() -> None:
 			print(error.as_string())
 		elif result:
 			if len(result.elements) == 1:
+				try:
+					if result.elements[0].elements[0] == 'None':
+						result = result.elements.pop(0)
+						if len(result.elements) == 1:
+							print(repr(result))
+						else:
+							print(repr(result.elements[0]))
+					continue
+				except:
+					...
 				if repr(result.elements[0]) != 'None':
 					print(repr(result.elements[0]))
-				else:
-					...
 			else:
 				print(repr(result))
 
@@ -66,6 +74,7 @@ def intepreter(fn) -> None:
 				_, error = Runtime.run('<program>', script)
 				if error:
 					print(error.as_string())
+				del _
 	except FileNotFoundError:
 		print(f"Failed to load script \"{fn}\": File not found")
 	except PermissionError:
@@ -77,8 +86,12 @@ def cli() -> None:
 	if len(sys.argv) == 1:
 		shell()
 	elif len(sys.argv) >= 2:
-		rt = ' '.join(sys.argv[1:])
-		intepreter(rt)
+		if sys.argv[1] != '--version':
+			rt = ' '.join(sys.argv[1:])
+			intepreter(rt)
+		else:
+			print(ConstantData.VERSION)
+		
 	else:
 		raise Exception(f"Nytescript CLI Failed")
 	

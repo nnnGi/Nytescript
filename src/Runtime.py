@@ -2,6 +2,7 @@ from Errors import RTError, RecursiveError, KeyboardInterrupted
 from Parser import Parser, RTResult
 from Lexer import Lexer, Token, Position, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
+from Helper import Help
 from ConstantData import FILE_EXTENSION, STDLIB, os, sys, subprocess
 
 #######################################
@@ -176,54 +177,54 @@ class Number(Value):
 
 	def get_comparison_eq(self, other):
 		if isinstance(other, Number):
-			return Number(int(self.value == other.value)).set_context(self.context), None
+			return Bool(int(self.value == other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def get_comparison_ne(self, other):
 		if isinstance(other, Number):
-			return Number(int(self.value != other.value)).set_context(self.context), None
+			return Bool(int(self.value != other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def get_comparison_lt(self, other):
 		if isinstance(other, Number):
-			return Number(int(self.value < other.value)).set_context(self.context), None
+			return Bool(int(self.value < other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def get_comparison_gt(self, other):
 		if isinstance(other, Number):
-			return Number(int(self.value > other.value)).set_context(self.context), None
+			return Bool(int(self.value > other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def get_comparison_lte(self, other):
 		if isinstance(other, Number):
-			return Number(int(self.value <= other.value)).set_context(self.context), None
+			return Bool(int(self.value <= other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def get_comparison_gte(self, other):
 		if isinstance(other, Number):
-			return Number(int(self.value >= other.value)).set_context(self.context), None
+			return Bool(int(self.value >= other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def anded_by(self, other):
 		if isinstance(other, Number):
-			return Number(int(self.value and other.value)).set_context(self.context), None
+			return Bool(int(self.value and other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def ored_by(self, other):
 		if isinstance(other, Number):
-			return Number(int(self.value or other.value)).set_context(self.context), None
+			return Bool(int(self.value or other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def notted(self):
-		return Number(1 if self.value == 0 else 0).set_context(self.context), None
+		return Bool(1 if self.value == 0 else 0).set_context(self.context), None
 
 	def copy(self):
 		copy = Number(self.value)
@@ -242,9 +243,30 @@ class Number(Value):
 	def __repr__(self):
 		return str(self.value)
 
+
 Number.null = Number(0)
-Number.false = Number(0)
-Number.true = Number(1)
+
+class Bool(Number):
+	def __init__(self, value):
+		super().__init__(value)
+		self.value = value
+		if self.value not in [0, 1]:
+			self.value = 0
+	
+	def copy(self):
+		copy = Bool(self.value)
+		copy.set_pos(self.pos_start, self.pos_end)
+		copy.set_context(self.context)
+		return copy
+	
+	def __str__(self):
+		return 'True' if self.value == 1 else 'False'
+
+	def __repr__(self):
+		return 'True' if self.value == 1 else 'False'
+
+Bool.true = Bool(1)
+Bool.false = Bool(0)
 
 class String(Value):
 	def __init__(self, value):
@@ -309,13 +331,13 @@ class String(Value):
 
 	def get_comparison_eq(self, other):
 		if isinstance(other, String):
-			return Number(int(self.value == other.value)).set_context(self.context), None
+			return Bool(int(self.value == other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
 	def get_comparison_ne(self, other):
 		if isinstance(other, String):
-			return Number(int(self.value != other.value)).set_context(self.context), None
+			return Bool(int(self.value != other.value)).set_context(self.context), None
 		else:
 			return None, Value.illegal_operation(self, other)
 
@@ -414,20 +436,20 @@ class List(Value):
 	def get_comparison_eq(self, other):
 		if isinstance(other, List):
 			if len(self.elements) != len(other.elements):
-				return Number.false.set_context(self.context), None
+				return Bool.false.set_context(self.context), None
 			for i in range(len(self.elements)):
 				comparison_result, error = self.elements[i].get_comparison_eq(other.elements[i])
 				if error: return None, error
 				if not comparison_result.is_true():
-					return Number.false.set_context(self.context), None
-			return Number.true.set_context(self.context), None
+					return Bool.false.set_context(self.context), None
+			return Bool.true.set_context(self.context), None
 		else:
-			return Number.false.set_context(self.context), None
+			return Bool.false.set_context(self.context), None
 
 	def get_comparison_ne(self, other):
 		comparison_result, error = self.get_comparison_eq(other)
 		if error: return None, error
-		return Number(1 - comparison_result.value).set_context(self.context), None
+		return Bool(1 - comparison_result.value).set_context(self.context), None
 
 	def copy(self):
 		copy = List(self.elements)
@@ -454,12 +476,11 @@ class BaseFunction(Value):
 		new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
 		return new_context
 
-
 	def check_args(self, arg_names, args):
 		res = RTResult()
 
 		if len(args) == 0:
-			return res.success(NoneType())
+			return res.success(NoneType.none)
 
 		if len(args) > len(arg_names):
 			return res.failure(RTError(
@@ -635,6 +656,19 @@ class BuiltInFunction(BaseFunction):
 		return RTResult().success(Number(result))
 	execute_Number.arg_names = ['value']
 
+	def execute_Bool(self, exec_ctx):
+		data_value = exec_ctx.symbol_table.get('value')
+		try:
+			result = int(data_value.value)
+		except (ValueError, TypeError) as e:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				f"Cannot convert value to Boolean: {e}",
+				exec_ctx
+			))
+		return RTResult().success(Bool(result))
+	execute_Bool.arg_names = ['value']
+
 	def execute_String(self, exec_ctx):
 		value = exec_ctx.symbol_table.get('value')
 		try:
@@ -699,16 +733,16 @@ class BuiltInFunction(BaseFunction):
 
 		if isinstance(iterable_value, String):
 			if str(item_value) in iterable_value.value:
-				return RTResult().success(Number.true)
-			return RTResult().success(Number.false)
+				return RTResult().success(Bool.true)
+			return RTResult().success(Bool.false)
 
 		elif isinstance(iterable_value, List):
 			for element in iterable_value.elements:
 				comparison_result, error = element.get_comparison_eq(item_value)
 				if error: return RTResult().failure(error)
 				if comparison_result.is_true():
-					return RTResult().success(Number.true)
-			return RTResult().success(Number.false)
+					return RTResult().success(Bool.true)
+			return RTResult().success(Bool.false)
 
 		else:
 			return RTResult().failure(RTError(
@@ -720,22 +754,22 @@ class BuiltInFunction(BaseFunction):
 
 	def execute_is_num(self, exec_ctx):
 		is_number = isinstance(exec_ctx.symbol_table.get("value"), Number)
-		return RTResult().success(Number.true if is_number else Number.false)
+		return RTResult().success(Bool.true if is_number else Bool.false)
 	execute_is_num.arg_names = ["value"]
 
 	def execute_is_string(self, exec_ctx):
 		is_string = isinstance(exec_ctx.symbol_table.get("value"), String)
-		return RTResult().success(Number.true if is_string else Number.false)
+		return RTResult().success(Bool.true if is_string else Bool.false)
 	execute_is_string.arg_names = ["value"]
 
 	def execute_is_list(self, exec_ctx):
 		is_list = isinstance(exec_ctx.symbol_table.get("value"), List)
-		return RTResult().success(Number.true if is_list else Number.false)
+		return RTResult().success(Bool.true if is_list else Bool.false)
 	execute_is_list.arg_names = ["value"]
 
 	def execute_is_function(self, exec_ctx):
 		is_function = isinstance(exec_ctx.symbol_table.get("value"), BaseFunction)
-		return RTResult().success(Number.true if is_function else Number.false)
+		return RTResult().success(Bool.true if is_function else Bool.false)
 	execute_is_function.arg_names = ["value"]
 
 	def execute_sorted(self, exec_ctx):
@@ -1534,22 +1568,40 @@ class Interpreter:
 						context
 					))
 
-				executable = f'''import math, random, time, datetime, os, sys, re, json, platform\nprint({value})'''
 				try:
-					result = subprocess.run(
-						[sys.executable, "-c", executable],
-						capture_output=True,
+					proc = subprocess.Popen(
+						["python", "-i"],
+						stdin=subprocess.PIPE,
+						stdout=subprocess.PIPE,
+						stderr=subprocess.PIPE,
 						text=True,
-						check=True
-	   				)
-					result = result.stdout.removesuffix('\n')
+						bufsize=1
+					)
+					value = value.value.split('\n')
+					
+					# Send Python commands
+					commands = ["import math, random, time, datetime, os, sys, re, json, platform"]
+					for i in value:
+						commands.append(i)
+					commands.append("exit()")
+
+					for cmd in commands:
+						proc.stdin.write(cmd + "\n")
+						proc.stdin.flush()
+
+					# Read output until the process ends
+					result, error = proc.communicate()
+					result = result.removesuffix('"\n')
+					result = result.removeprefix('"')
+					result = result.removesuffix("'\n")
+					result = result.removeprefix("'")
+
 				except subprocess.CalledProcessError as e:
 					return res.failure(RTError(
 						node.pos_start, node.pos_end,
 						f"Failed to run Subprocess, {e.stderr}",
 						context
 					))
-
 
 				context.symbol_table.set(var_name, String(result))
 				return res.success(result) 
@@ -1591,7 +1643,7 @@ class Interpreter:
 
 		module_context = Context(f"<module {module_name}>", context, node.pos_start)
 		module_context.symbol_table = SymbolTable(global_symbol_table)
-		module_result_value, module_error = run(filename, script, context=module_context)
+		_, module_error = run(filename, script, context=module_context)
 
 		if module_error:
 			return res.failure(RTError(
@@ -1603,6 +1655,49 @@ class Interpreter:
 		module_value = ModuleValue(module_name, module_context.symbol_table).set_context(context).set_pos(node.pos_start, node.pos_end)
 
 		context.symbol_table.set(module_name, module_value)
+
+		return res.success(module_value)
+	
+	def visit_IncludeNode(self, node, context):
+		res = RTResult()
+		module_name = node.module_name_tok.value
+		filename = f"{module_name}{FILE_EXTENSION}"
+
+		current_ctx = context
+		while current_ctx:
+			if current_ctx.symbol_table and current_ctx.symbol_table.get(module_name) is not None:
+				return res.success(current_ctx.symbol_table.get(module_name))
+			current_ctx = current_ctx.parent
+			
+		if module_name in STDLIB:
+			script = STDLIB[module_name]
+			module_value, module_error = run(filename, script, context=None)
+
+			if module_error:
+				return res.failure(RTError(
+				node.pos_start, node.pos_end,
+				f"Error importing module '{module_name}':\n{module_error.as_string()}",
+				context
+			))
+
+			return res.success(module_value)
+
+		try:
+			with open(filename, "r") as f:
+				script = f.read()
+		except FileNotFoundError:
+			return res.failure(RTError(
+				node.pos_start, node.pos_end,
+				f"Module '{module_name}' not found. File '{filename}' does not exist.",
+				context
+			))
+		except Exception as e:
+			return res.failure(RTError(
+				node.pos_start, node.pos_end,
+				f"Failed to read module file '{filename}': {e}",
+				context
+			))
+		module_value, module_error = run(filename, script, context=None)
 
 		return res.success(module_value)
 
@@ -1675,8 +1770,8 @@ def symbols():
 	global global_symbol_table, imported_modules
 	global_symbol_table = SymbolTable()
 	global_symbol_table.set(SYMBOL_TABLE[0], Number.null)
-	global_symbol_table.set(SYMBOL_TABLE[1], Number.false)
-	global_symbol_table.set(SYMBOL_TABLE[2], Number.true)
+	global_symbol_table.set(SYMBOL_TABLE[1], Bool.false)
+	global_symbol_table.set(SYMBOL_TABLE[2], Bool.true)
 	global_symbol_table.set(SYMBOL_TABLE[3], NoneType.none)
 	for i in range(4, len(SYMBOL_TABLE)):
 		global_symbol_table.set(SYMBOL_TABLE[i], BuiltInFunction(SYMBOL_TABLE[i]))

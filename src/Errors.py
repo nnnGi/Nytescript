@@ -112,3 +112,4 @@ class RTError(Error):
 			ctx = ctx.parent
 
 		return 'Traceback (most recent call last):\n' + result
+	
