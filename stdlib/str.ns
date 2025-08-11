@@ -1,0 +1,27 @@
+func starmap(elements, fun)
+	var new_elements = []
+
+	for i = 0 to len(elements) then
+		append(new_elements, fun(elements/i))
+	end
+
+	return new_elements
+end
+
+func getat(str, idx)
+	if is_str(str) != True then; return None; end
+	if is_num(idx) != True then; return None; end
+	return str / idx
+end
+
+func removeprefix(str, item)
+	var torun = `'${str}'.removeprefix('${item}')`
+	import python
+	return torun
+end
+
+func removesuffix(str, item)
+	var torun = `'${str}'.removesuffix('${item}')`
+	import python
+	return torun
+end
