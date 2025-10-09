@@ -38,6 +38,6 @@ exit the programme.
 
 Nothing needs to be installed except the ```nytescript.py``` and ```shell.py``` file, preferably Python 3.12 and above.
 
-© Copyright @\_nnn_ 2025 - 2025
+© Copyright @0xnCubed 2025 - 2025
 
 ### Language Grammar is in the grammar.txt file
