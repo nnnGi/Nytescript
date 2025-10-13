@@ -1,12 +1,12 @@
 '''
-Nytescript Shell and Interpreter, written by @_nnn_ in Python 3.12.9, 3.13.2, 3.13.3 and 3.13.5
+Nytescript Shell and Interpreter, written by @0xnCubed in Python 3.12.9, 3.13.2, 3.13.3 and 3.13.5
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 
-© Copyright @__nnn__ 2025 - 2025
+© Copyright @0xnCubed 2025 - 2025
 '''
 
-import ConstantData
+import Data
 import Runtime
 import os, sys, platform
 from functools import cache
@@ -31,7 +31,7 @@ if sys.platform != 'win32':
 @cache
 def shell() -> None:
 	INTEPRETER_LANG = sys.version.split(' [')[0]
-	BOOT_INFO = f'Nytescript {ConstantData.VERSION} [Python {INTEPRETER_LANG}] on {platform.system() if platform.system() != "Darwin" else "Darwin (MacOS)"}\nType "license" or "help" for more information and "exit" to quit'
+	BOOT_INFO = f'Nytescript {Data.VERSION} [Python {INTEPRETER_LANG}] on {platform.system() if platform.system() != "Darwin" else "Darwin (MacOS)"}\nType "license" or "help" for more information and "exit" to quit'
 
 	print(BOOT_INFO)
 	while True:
@@ -86,11 +86,11 @@ def cli() -> None:
 	if len(sys.argv) == 1:
 		shell()
 	elif len(sys.argv) >= 2:
-		if sys.argv[1] != '--version':
+		if sys.argv[1] != '--version' or '-v':
 			rt = ' '.join(sys.argv[1:])
 			intepreter(rt)
 		else:
-			print(ConstantData.VERSION)
+			print(Data.VERSION)
 		
 	else:
 		raise Exception(f"Nytescript CLI Failed")
