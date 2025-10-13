@@ -28,7 +28,7 @@ It is a simple, interpreted esoteric programming language (esolang) implemented 
 Notes: No libraries apart from the standard library are used
 
 # Further Information
-Nytescript Esolang, written by @\_nnn_ in Python 3.12.9 and 3.13.2 and 3.13.3	
+Nytescript Esolang, written by @0xnCubed in Python 3.12.9 and 3.13.2 and 3.13.3	
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 
