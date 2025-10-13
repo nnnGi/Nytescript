@@ -1,5 +1,5 @@
 from Errors import ExpectedCharError, IllegalCharError, InvalidSyntaxError
-from ConstantData import DIGITS, LETTERS, LETTERS_DIGITS
+from Data import DIGITS, LETTERS, LETTERS_DIGITS
 from Tokens import *
 
 #######################################

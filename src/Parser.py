@@ -1,5 +1,5 @@
 from Errors import InvalidSyntaxError
-from ConstantData import LICENSE
+from Data import LICENSE
 from Lexer import *
 from Nodes import *
 

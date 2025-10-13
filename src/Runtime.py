@@ -3,7 +3,7 @@ from Parser import Parser, RTResult
 from Lexer import Lexer, Token, Position, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
 from Helper import Help
-from ConstantData import FILE_EXTENSION, STDLIB, os, sys, subprocess
+from Data import FILE_EXTENSION, STDLIB, os, sys, importlib
 
 #######################################
 # VALUES
@@ -473,7 +473,10 @@ class BaseFunction(Value):
 
 	def generate_new_context(self):
 		new_context = Context(self.name, self.context, self.pos_start)
-		new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
+
+		parent_symbol_table = new_context.parent.symbol_table if new_context.parent else None
+
+		new_context.symbol_table = SymbolTable(parent_symbol_table)
 		return new_context
 
 	def check_args(self, arg_names, args):
@@ -518,6 +521,11 @@ class Function(BaseFunction):
 		self.body_node = body_node
 		self.arg_names = arg_names
 		self.should_auto_return = should_auto_return
+
+	def bind_to_instance(self, instance):
+		new_method = self.copy()
+		new_method.instance = instance
+		return new_method
 
 	def execute(self, args):
 		res = RTResult()
@@ -958,13 +966,112 @@ class BuiltInFunction(BaseFunction):
 
 	execute_run.arg_names = ["fn"]
 
+class BuiltInMethod(BaseFunction):
+	def __init__(self, name, py_func):
+		super().__init__(name)
+		self.py_func = py_func
+
+	def execute(self, args):
+		res = RTResult()
+		exec_ctx = self.generate_new_context()
+
+		# 1. Unwrap arguments from Nytescript Values to Python types
+		py_args = []
+		for arg in args:
+			if isinstance(arg, Number):
+				py_args.append(arg.value)
+			elif isinstance(arg, String):
+				py_args.append(arg.value)
+			elif isinstance(arg, List):
+				# Note: This unwraps recursively, which might not be what you want for all functions.
+				# For a function like random.choice, you need the List object itself.
+				# This simple version works for math functions.
+				py_args.append([elem.value for elem in arg.elements])
+			elif isinstance(arg, NoneType):
+				py_args.append(None)
+			else:
+				# If a function needs the raw Nytescript object (e.g., random.choice),
+				# you would handle it here by passing `arg` directly.
+				py_args.append(arg)
+
+
+		# 2. Call the actual Python function
+		try:
+			return_value = self.py_func(*py_args)
+		except Exception as e:
+			return res.failure(RTError(
+				self.pos_start, self.pos_end,
+				f"'{self.name}': {e}",
+				exec_ctx, error_title="Standard Library Error"
+			))
+
+		# 3. Wrap the Python return value back into a Nytescript Value
+		wrapped_value = None
+		if isinstance(return_value, (int, float)):
+			wrapped_value = Number(return_value)
+		elif isinstance(return_value, str):
+			wrapped_value = String(return_value)
+		elif isinstance(return_value, bool):
+			wrapped_value = Bool.true if return_value else Bool.false
+		elif isinstance(return_value, list):
+			wrapped_value = List([Number(item) for item in return_value]) # Simple wrapping
+		elif return_value is None:
+			wrapped_value = NoneType.none
+		else:
+			# Fallback for unexpected types
+			wrapped_value = String(str(return_value))
+
+		return res.success(wrapped_value.set_context(exec_ctx).set_pos(self.pos_start, self.pos_end))
+
+	def copy(self):
+		copy = BuiltInMethod(self.name, self.py_func)
+		copy.set_context(self.context)
+		copy.set_pos(self.pos_start, self.pos_end)
+		return copy
+
+	def __repr__(self):
+		return f"<Stdlib {self.name}>"
+
+class PyObjectValue(Value):
+	def __init__(self, py_object):
+		super().__init__()
+		self.py_object = py_object
+		
+	def __repr__(self):
+		return repr(self.py_object)
+
+class PyMethodWrapper(Value):
+	def __init__(self, method, py_object_instance):
+		super().__init__()
+		self.method = method
+		self.py_object_instance = py_object_instance
+		
+	def execute(self, args, context): 
+		res = RTResult()
+		
+		unwrapped_args = [arg.py_object if isinstance(arg, PyObjectValue) else arg.value 
+						  for arg in args]
+		
+		try:
+			py_result = self.method(*unwrapped_args)
+		except Exception as e:
+			return res.failure(RTError(self.pos_start, self.pos_end, str(e), context))
+
+		return res.success(self.wrap_py_value(py_result).set_context(context).set_pos(self.pos_start, self.pos_end))
+
+	def wrap_py_value(self, py_value):
+		if isinstance(py_value, (int, float)):
+			return Number(py_value)
+		if isinstance(py_value, str):
+			return String(py_value)
+		return PyObjectValue(py_value) 
+
 class BoundMethod(BaseFunction):
 	def __init__(self, name, instance, method_function):
 		super().__init__(name)
 		self.instance = instance
 		self.method_function = method_function
 		self.arg_names = self.method_function.arg_names
-
 
 	def execute(self, args_from_caller):
 		all_args_for_method = [self.instance] + args_from_caller
@@ -1548,6 +1655,50 @@ class Interpreter:
 	def visit_ImportNode(self, node, context):
 		res = RTResult()
 		module_name = node.module_name_tok.value
+
+		if module_name in STDLIB:
+			lib_type, lib_content = STDLIB[module_name]
+			module_scope = {} # This will hold the functions and variables
+
+			try:
+				if lib_type == 'module':
+					# Handle dynamic import of a Python module
+					py_module = importlib.import_module(lib_content)
+					module_scope = py_module.__dict__
+
+				elif lib_type == 'code':
+					# Handle execution of a Python code string
+					# The exec function populates the module_scope dictionary
+					exec(lib_content, module_scope)
+
+			except Exception as e:
+				return res.failure(RTError(
+					node.pos_start, node.pos_end,
+					f"Failed to load Python module '{module_name}': {e}",
+					context
+				))
+			
+			# Create a Symbol Table for the new module
+			module_symbol_table = SymbolTable(global_symbol_table)
+			
+			# Populate the symbol table from the module_scope
+			for name, item in module_scope.items():
+				if name.startswith("__"): # Skip private/magic attributes
+					continue
+				
+				if callable(item):
+					module_symbol_table.set(name, BuiltInMethod(name, item))
+				elif isinstance(item, (int, float)):
+					module_symbol_table.set(name, Number(item))
+				elif isinstance(item, str):
+					module_symbol_table.set(name, String(item))
+				# Add other type wrappers as needed
+
+			# Create the ModuleValue and store it
+			module_value = ModuleValue(module_name, module_symbol_table).set_context(context).set_pos(node.pos_start, node.pos_end)
+			context.symbol_table.set(module_name, module_value)
+			return res.success(module_value)
+
 		filename = f"{module_name}{FILE_EXTENSION}"
 
 		current_ctx = context
@@ -1555,75 +1706,6 @@ class Interpreter:
 			if current_ctx.symbol_table and current_ctx.symbol_table.get(module_name) is not None:
 				return res.success(current_ctx.symbol_table.get(module_name))
 			current_ctx = current_ctx.parent
-			
-		if module_name in STDLIB:
-			if module_name == 'python':
-				var_name = 'torun'
-				value = context.symbol_table.get(var_name)
-
-				if not value:
-					return res.failure(RTError(
-						node.pos_start, node.pos_end,
-						f"'{var_name}' is not defined",
-						context
-					))
-
-				try:
-					proc = subprocess.Popen(
-						["python", "-i"],
-						stdin=subprocess.PIPE,
-						stdout=subprocess.PIPE,
-						stderr=subprocess.PIPE,
-						text=True,
-						bufsize=1
-					)
-					value = value.value.split('\n')
-					
-					# Send Python commands
-					commands = ["import math, random, time, datetime, os, sys, re, json, platform"]
-					for i in value:
-						commands.append(i)
-					commands.append("exit()")
-
-					for cmd in commands:
-						proc.stdin.write(cmd + "\n")
-						proc.stdin.flush()
-
-					# Read output until the process ends
-					result, error = proc.communicate()
-					result = result.removesuffix('"\n')
-					result = result.removeprefix('"')
-					result = result.removesuffix("'\n")
-					result = result.removeprefix("'")
-
-				except subprocess.CalledProcessError as e:
-					return res.failure(RTError(
-						node.pos_start, node.pos_end,
-						f"Failed to run Subprocess, {e.stderr}",
-						context
-					))
-
-				context.symbol_table.set(var_name, String(result))
-				return res.success(result) 
-			
-			else:
-				script = STDLIB[module_name]
-				module_context = Context(f"<STDLIB {module_name}>", context, node.pos_start)
-				module_context.symbol_table = SymbolTable(global_symbol_table)
-				module_result_value, module_error = run(filename, script, context=module_context)
-
-				if module_error:
-					return res.failure(RTError(
-						node.pos_start, node.pos_end,
-						f"Error importing module '{module_name}':\n{module_error.as_string()}",
-						context
-				))
-
-				module_value = ModuleValue(module_name, module_context.symbol_table).set_context(context).set_pos(node.pos_start, node.pos_end)
-
-				context.symbol_table.set(module_name, module_value)
-
-				return res.success(module_value)
 
 		try:
 			with open(filename, "r") as f:
@@ -1704,6 +1786,27 @@ class Interpreter:
 	def visit_MemberAccessNode(self, node, context):
 		res = RTResult()
 		object_value = res.register(self.visit(node.object_node, context))
+
+		object_value = res.register(self.visit(node.object_node, context))
+
+		if isinstance(object_value, PyObjectValue):
+			# 'c' is a wrapped Python object (like the File instance)
+			py_object = object_value.py_object
+			member_name = node.member_name_tok.value
+	
+			# Use Python's built-in getattr to find the method
+			if hasattr(py_object, member_name):
+				py_member = getattr(py_object, member_name)
+	
+			# Check if it's a callable method
+			if callable(py_member):
+				# Wrap the Python method into your custom call value
+				method_wrapper = PyMethodWrapper(py_member, object_value)
+				return res.success(method_wrapper)
+			else:
+				# It's an attribute (e.g., c.filename). Wrap it in a PyObjectValue.
+				return res.success(PyObjectValue(py_member))
+			
 		if res.should_return(): return res
 
 		member_value, error = object_value.get_member(node.member_name_tok) 
