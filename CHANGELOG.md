@@ -14,6 +14,7 @@
  - Renamed `str` -> `strutils`
  - Added `listutils`
  - Added Inbuilt Python Libraries of `math`, `time`, `random`, `os` and `sys` to the Standard Library
+ - Both `import` and `include` statements have been rewritten, and imports are now recursive
 
 # 🐞 Bug Fixes:
  - Fixed a Bug allowing KeyboardInterrupts to exit a While Loop
