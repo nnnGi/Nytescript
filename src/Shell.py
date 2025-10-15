@@ -53,10 +53,9 @@ def shell() -> None:
 				try:
 					if result.elements[0].elements[0] == 'None':
 						result = result.elements.pop(0)
-						if len(result.elements) == 1:
-							print(repr(result))
-						else:
-							print(repr(result.elements[0]))
+						print(repr(result))
+					elif len(result.elements[0]) != 0:
+						print(repr(result.elements[0]))
 					continue
 				except:
 					...
