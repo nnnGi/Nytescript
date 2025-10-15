@@ -1161,6 +1161,62 @@ class PyMethod(Value):
 	def __repr__(self):
 		return f'<PyMethod {self.name}>'
 
+class PyModule(Value):
+	def __init__(self, name, py_module):
+		super().__init__()
+		self.name = name
+		self.py_module = py_module # The actual Python module object
+
+	def copy(self):
+		copy = PyModule(self.name, self.py_module)
+		copy.set_pos(self.pos_start, self.pos_end)
+		copy.set_context(self.context)
+		return copy
+
+	def get_member(self, name):
+		res = RTResult()
+
+		# Check if the member exists in the underlying Python module
+		if not hasattr(self.py_module, name):
+			return None, self.illegal_operation()
+
+		attr = getattr(self.py_module, name)
+
+		if callable(attr):
+			class PyMethodWrapper(BuiltInFunction):
+				def __init__(self, name, py_func):
+					super().__init__(name)
+					self.py_func = py_func
+				
+				def execute(self, args):
+					py_args = [arg.value for arg in args]
+					try:
+						py_result = self.py_func(*py_args)
+						if isinstance(py_result, (int, float)):
+							return res.success(Number(py_result).set_context(self.context))
+						elif isinstance(py_result, str):
+							return res.success(String(py_result).set_context(self.context))
+						elif isinstance(py_result, list):
+							elements = [Number(x) if isinstance(x, (int, float)) else String(str(x)) for x in py_result]
+							return res.success(List(elements).set_context(self.context))
+						return res.success(NoneType.none)
+					except Exception as e:
+						return res.failure(RTError(self.pos_start, self.pos_end, f"Error in imported function '{self.name}': {e}", self.context))
+
+			return PyMethodWrapper(name, attr).set_context(self.context).set_pos(self.pos_start, self.pos_end), None
+
+		# Wrap primitive types
+		elif isinstance(attr, (int, float)):
+			return Number(attr).set_context(self.context), None
+		elif isinstance(attr, str):
+			return String(attr).set_context(self.context), None
+		
+		# Fallback for unhandled types
+		return NoneType.none, None
+
+	def __repr__(self):
+		return f"<PyModule {self.name}>"
+
 class BoundMethod(BaseFunction):
 	def __init__(self, name, instance, method_function):
 		super().__init__(name)
@@ -1845,6 +1901,45 @@ class Interpreter:
 	def visit_IncludeNode(self, node, context):
 		res = RTResult()
 		module_name = node.module_name_tok.value
+
+		if module_name in STDLIB:
+			lib_type, lib_content = STDLIB[module_name]
+			module_scope = {}
+			
+			try:
+				if lib_type == 'module':
+					py_module = importlib.import_module(lib_content)
+					module_scope = py_module.__dict__
+
+				elif lib_type == 'code':
+					exec(lib_content, module_scope)
+
+			except Exception as e:
+				return res.failure(RTError(
+					node.pos_start, node.pos_end,
+					f"Failed to load Python module '{module_name}' for inclusion: {e}",
+					context, error_title="IncludeError"
+				))
+			
+			for name, item in module_scope.items():
+				if name.startswith("__"):
+					continue
+				
+				wrapped_value = None
+				if isclass(item):
+					wrapped_value = PyClass(item)
+				elif callable(item):
+					wrapped_value = BuiltInMethod(name, item)
+				elif isinstance(item, (int, float)):
+					wrapped_value = Number(item)
+				elif isinstance(item, str):
+					wrapped_value = String(item)
+					
+				if wrapped_value:
+					context.symbol_table.set(name, wrapped_value.set_context(context).set_pos(node.pos_start, node.pos_end))
+				
+			return res.success(NoneType.none) 
+
 		filename = f"{module_name}{FILE_EXTENSION}"
 
 		current_ctx = context
@@ -1853,37 +1948,41 @@ class Interpreter:
 				return res.success(current_ctx.symbol_table.get(module_name))
 			current_ctx = current_ctx.parent
 			
-		if module_name in STDLIB:
-			script = STDLIB[module_name]
-			module_value, module_error = run(filename, script, context=None)
-
-			if module_error:
-				return res.failure(RTError(
-				node.pos_start, node.pos_end,
-				f"Error importing module '{module_name}':\n{module_error.as_string()}",
-				context
-			))
-
-			return res.success(module_value)
-
 		try:
 			with open(filename, "r") as f:
 				script = f.read()
 		except FileNotFoundError:
 			return res.failure(RTError(
 				node.pos_start, node.pos_end,
-				f"Module '{module_name}' not found. File '{filename}' does not exist.",
-				context
+				f"Module '{module_name}' is not a standard library module and file '{filename}' not found.",
+				context, error_title="IncludeError"
 			))
 		except Exception as e:
 			return res.failure(RTError(
 				node.pos_start, node.pos_end,
 				f"Failed to read module file '{filename}': {e}",
-				context
+				context, error_title="IncludeError"
 			))
-		module_value, module_error = run(filename, script, context=None)
 
-		return res.success(module_value)
+		include_context = Context(f"<include {module_name}>", context, node.pos_start)
+		include_context.symbol_table = SymbolTable(context.symbol_table) 
+		
+		include_result, include_error = run(filename, script, context=include_context) 
+
+		if include_error:
+			return res.failure(RTError(
+				node.pos_start, node.pos_end,
+				f"Error including module '{module_name}':\n{include_error.as_string()}",
+				context, error_title="IncludeError"
+			))
+
+		try:
+			for name, value in include_context.symbol_table.symbols.items():
+				context.symbol_table.set(name, value)
+		except AttributeError:
+			pass 
+
+		return res.success(include_result)
 
 	def visit_MemberAccessNode(self, node, context): 
 		res = RTResult()
