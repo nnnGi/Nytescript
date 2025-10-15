@@ -5,6 +5,8 @@ from Tokens import *
 from Helper import Help
 from Data import FILE_EXTENSION, STDLIB, os, sys, importlib
 
+from inspect import isclass 
+
 #######################################
 # VALUES
 #######################################
@@ -354,7 +356,7 @@ class String(Value):
 		return self.value
 
 	def __repr__(self):
-		return f'"{self.value}"'
+		return f'"{self.value.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")}"'
 
 class List(Value):
 	def __init__(self, elements):
@@ -1032,39 +1034,132 @@ class BuiltInMethod(BaseFunction):
 	def __repr__(self):
 		return f"<Stdlib {self.name}>"
 
-class PyObjectValue(Value):
+# In Runtime.py, after the 'class List(Value): ...' definition
+
+class PyObject(Value):
+	"""Wrapper for Python object instances (like the File object)."""
 	def __init__(self, py_object):
 		super().__init__()
-		self.py_object = py_object
-		
+		self.py_object = py_object # The actual Python object instance
+
+	def copy(self):
+		copy = PyObject(self.py_object)
+		copy.set_pos(self.pos_start, self.pos_end)
+		copy.set_context(self.context)
+		return copy
+
 	def __repr__(self):
 		return repr(self.py_object)
 
-class PyMethodWrapper(Value):
-	def __init__(self, method, py_object_instance):
-		super().__init__()
-		self.method = method
-		self.py_object_instance = py_object_instance
-		
-	def execute(self, args, context): 
-		res = RTResult()
-		
-		unwrapped_args = [arg.py_object if isinstance(arg, PyObjectValue) else arg.value 
-						  for arg in args]
-		
-		try:
-			py_result = self.method(*unwrapped_args)
-		except Exception as e:
-			return res.failure(RTError(self.pos_start, self.pos_end, str(e), context))
-
-		return res.success(self.wrap_py_value(py_result).set_context(context).set_pos(self.pos_start, self.pos_end))
-
+	# Utility function to convert Python types back to interpreter Value types
 	def wrap_py_value(self, py_value):
+		"""Converts a raw Python value to the appropriate Nytescript Value."""
+		if py_value is None:
+			return NoneType.none
 		if isinstance(py_value, (int, float)):
 			return Number(py_value)
 		if isinstance(py_value, str):
 			return String(py_value)
-		return PyObjectValue(py_value) 
+		if isinstance(py_value, list):
+			return List([self.wrap_py_value(e) for e in py_value])
+		if isclass(py_value):
+			return PyClass(py_value)
+		if callable(py_value):
+			return BuiltInMethod(py_value.__name__, py_value)
+		
+		# Default wrapper for other complex Python objects
+		return PyObject(py_value)
+
+	def get_member(self, member_name):
+		res = RTResult()
+
+		member_name = member_name.value if hasattr(member_name, 'value') else str(member_name)
+
+		if not hasattr(self.py_object, member_name):
+			return None, res.failure(RTError(
+				self.pos_start, self.pos_end,
+				f"Python object '{type(self.py_object).__name__}' has no member '{member_name}'",
+				self.context, "AttributeError"
+			))
+
+		py_member = getattr(self.py_object, member_name)
+
+		# If the member is callable (a method), wrap it in PyMethod
+		if callable(py_member) and not isclass(py_member):
+			method_wrapper = PyMethod(py_member, self)
+			return method_wrapper.set_context(self.context).set_pos(self.pos_start, self.pos_end), None
+		
+		# If it's a data attribute, wrap its value
+		return self.wrap_py_value(py_member).set_context(self.context).set_pos(self.pos_start, self.pos_end), None
+
+class PyClass(Value):
+	"""Wrapper for Python classes."""
+	def __init__(self, py_class):
+		super().__init__()
+		self.py_class = py_class
+		self.name = py_class.__name__
+		
+	def execute(self, args):
+		"""Handles the constructor call."""
+		res = RTResult()
+		
+		# Unwrap all arguments for the constructor call
+		unwrapped_args = [arg.py_object if isinstance(arg, PyObject) else arg.value 
+						  for arg in args if hasattr(arg, 'value') or isinstance(arg, PyObject)]
+
+		try:
+			# Call the Python class constructor
+			py_instance = self.py_class(*unwrapped_args)
+			
+			# Wrap the new Python instance in PyObject
+			py_object = PyObject(py_instance).set_context(self.context).set_pos(self.pos_start, self.pos_end)
+			return res.success(py_object)
+
+		except Exception as e:
+			return res.failure(RTError(self.pos_start, self.pos_end, f"Python Constructor Error: {str(e)}", self.context))
+		
+	def copy(self):
+		copy = PyClass(self.py_class)
+		copy.set_pos(self.pos_start, self.pos_end)
+		copy.set_context(self.context)
+		return copy
+
+	def __repr__(self):
+		return f'<PyClass {self.name}>'
+
+class PyMethod(Value):
+	"""Wrapper for Python methods bound to a PyObject instance."""
+	def __init__(self, py_method, instance):
+		super().__init__()
+		self.py_method = py_method # The actual Python method
+		self.instance = instance   # The PyObject instance it is bound to
+		self.name = py_method.__name__
+
+	def execute(self, args):
+		"""Handles the method calls."""
+		res = RTResult()
+		
+		# Unwrap arguments
+		unwrapped_args = [arg.py_object if isinstance(arg, PyObject) else arg.value 
+						  for arg in args if hasattr(arg, 'value') or isinstance(arg, PyObject)]
+		
+		try:
+			# Call the underlying Python method
+			py_result = self.py_method(*unwrapped_args)
+		except Exception as e:
+			return res.failure(RTError(self.pos_start, self.pos_end, f"Python Error: {str(e)}", self.context))
+
+		# Re-wrap the result using the PyObject's wrapper logic
+		return res.success(self.instance.wrap_py_value(py_result).set_context(self.context).set_pos(self.pos_start, self.pos_end))
+
+	def copy(self):
+		copy = PyMethod(self.py_method, self.instance)
+		copy.set_pos(self.pos_start, self.pos_end)
+		copy.set_context(self.context)
+		return copy
+	
+	def __repr__(self):
+		return f'<PyMethod {self.name}>'
 
 class BoundMethod(BaseFunction):
 	def __init__(self, name, instance, method_function):
@@ -1186,7 +1281,21 @@ class ModuleValue(Value):
 		self.symbol_table = symbol_table
 
 	def get_member(self, name_tok):
-		value = self.symbol_table.get(name_tok.value)
+		if hasattr(name_tok, 'value') and hasattr(name_tok, 'pos_start'):
+			member_name = name_tok.value
+			pos_start = name_tok.pos_start
+			pos_end = name_tok.pos_end
+		else:
+			member_name = str(name_tok)
+			pos_start = self.pos_start # Use the object's position as a default
+			pos_end = self.pos_end
+		
+		if not isinstance(member_name, str) or not member_name:
+			return None, self.illegal_operation()
+
+		# 2. Look up the value using the extracted string name
+		value = self.symbol_table.get(member_name)
+
 		if value is None:
 			return None, RTError(
 				name_tok.pos_start, name_tok.pos_end,
@@ -1658,43 +1767,36 @@ class Interpreter:
 
 		if module_name in STDLIB:
 			lib_type, lib_content = STDLIB[module_name]
-			module_scope = {} # This will hold the functions and variables
-
+			module_scope = {}
 			try:
 				if lib_type == 'module':
-					# Handle dynamic import of a Python module
 					py_module = importlib.import_module(lib_content)
 					module_scope = py_module.__dict__
 
 				elif lib_type == 'code':
-					# Handle execution of a Python code string
-					# The exec function populates the module_scope dictionary
 					exec(lib_content, module_scope)
 
 			except Exception as e:
 				return res.failure(RTError(
 					node.pos_start, node.pos_end,
 					f"Failed to load Python module '{module_name}': {e}",
-					context
+					context, error_title="ImportError"
 				))
 			
-			# Create a Symbol Table for the new module
 			module_symbol_table = SymbolTable(global_symbol_table)
 			
-			# Populate the symbol table from the module_scope
 			for name, item in module_scope.items():
-				if name.startswith("__"): # Skip private/magic attributes
+				if name.startswith("__"):
 					continue
-				
-				if callable(item):
+				if isclass(item):
+					module_symbol_table.set(name, PyClass(item))
+				elif callable(item):
 					module_symbol_table.set(name, BuiltInMethod(name, item))
 				elif isinstance(item, (int, float)):
 					module_symbol_table.set(name, Number(item))
 				elif isinstance(item, str):
 					module_symbol_table.set(name, String(item))
-				# Add other type wrappers as needed
-
-			# Create the ModuleValue and store it
+					
 			module_value = ModuleValue(module_name, module_symbol_table).set_context(context).set_pos(node.pos_start, node.pos_end)
 			context.symbol_table.set(module_name, module_value)
 			return res.success(module_value)
@@ -1783,35 +1885,17 @@ class Interpreter:
 
 		return res.success(module_value)
 
-	def visit_MemberAccessNode(self, node, context):
+	def visit_MemberAccessNode(self, node, context): 
 		res = RTResult()
-		object_value = res.register(self.visit(node.object_node, context))
 
 		object_value = res.register(self.visit(node.object_node, context))
-
-		if isinstance(object_value, PyObjectValue):
-			# 'c' is a wrapped Python object (like the File instance)
-			py_object = object_value.py_object
-			member_name = node.member_name_tok.value
+		if res.error: return res
 	
-			# Use Python's built-in getattr to find the method
-			if hasattr(py_object, member_name):
-				py_member = getattr(py_object, member_name)
-	
-			# Check if it's a callable method
-			if callable(py_member):
-				# Wrap the Python method into your custom call value
-				method_wrapper = PyMethodWrapper(py_member, object_value)
-				return res.success(method_wrapper)
-			else:
-				# It's an attribute (e.g., c.filename). Wrap it in a PyObjectValue.
-				return res.success(PyObjectValue(py_member))
-			
-		if res.should_return(): return res
+		member_name = node.member_name_tok
 
-		member_value, error = object_value.get_member(node.member_name_tok) 
-		
-		if error:
+		member_value, error = object_value.get_member(member_name)
+
+		if error: 
 			return res.failure(error)
 		
 		return res.success(member_value)

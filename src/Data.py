@@ -63,10 +63,16 @@ def lower(s):
 def split(s, sep=None):
 	return s.split(sep)
 
+def cutprefix(s, prefix):
+	return s.removeprefix(prefix)
+
+def cutsuffix(s, suffix):
+	return s.removesuffix(suffix)
+
 info = "strutils: A simple string utility module."
 """),
 	"listutils": ("code", """
-def map(func, lst):
+def starmap(func, lst):
 	return [func(x) for x in lst]
 			   
 def filter(func, lst):
@@ -74,6 +80,8 @@ def filter(func, lst):
 
 def sort(lst, key=None, reverse=False):
 	return sorted(lst, key=key, reverse=reverse)
+			   
+info = "listutils: A simple list utility module."
 """),
 	"fileio": ("code", """
 class File:
@@ -84,10 +92,14 @@ class File:
 	def read(self):
 		return self.file.read()
 	def write(self, data):
+		if mode != 'w' and mode != 'a':
+			raise Exception("File not opened in write or append mode")
 		self.file.write(data)
 	def close(self):
 		self.file.close()
 	def __repr__(self):
 		return f"<File at {self.filename} on {self.mode} Mode>"
+			
+info = "fileio: A simple file I/O module using Object-Oriented Programming."
 """),
 }
