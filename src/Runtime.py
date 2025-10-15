@@ -977,7 +977,6 @@ class BuiltInMethod(BaseFunction):
 		res = RTResult()
 		exec_ctx = self.generate_new_context()
 
-		# 1. Unwrap arguments from Nytescript Values to Python types
 		py_args = []
 		for arg in args:
 			if isinstance(arg, Number):
@@ -985,15 +984,10 @@ class BuiltInMethod(BaseFunction):
 			elif isinstance(arg, String):
 				py_args.append(arg.value)
 			elif isinstance(arg, List):
-				# Note: This unwraps recursively, which might not be what you want for all functions.
-				# For a function like random.choice, you need the List object itself.
-				# This simple version works for math functions.
 				py_args.append([elem.value for elem in arg.elements])
 			elif isinstance(arg, NoneType):
 				py_args.append(None)
 			else:
-				# If a function needs the raw Nytescript object (e.g., random.choice),
-				# you would handle it here by passing `arg` directly.
 				py_args.append(arg)
 
 
@@ -1007,7 +1001,6 @@ class BuiltInMethod(BaseFunction):
 				exec_ctx, error_title="Standard Library Error"
 			))
 
-		# 3. Wrap the Python return value back into a Nytescript Value
 		wrapped_value = None
 		if isinstance(return_value, (int, float)):
 			wrapped_value = Number(return_value)
@@ -1016,11 +1009,10 @@ class BuiltInMethod(BaseFunction):
 		elif isinstance(return_value, bool):
 			wrapped_value = Bool.true if return_value else Bool.false
 		elif isinstance(return_value, list):
-			wrapped_value = List([Number(item) for item in return_value]) # Simple wrapping
+			wrapped_value = List([Number(item) if isinstance(item, (int, float)) else String(str(item)) for item in return_value])
 		elif return_value is None:
 			wrapped_value = NoneType.none
 		else:
-			# Fallback for unexpected types
 			wrapped_value = String(str(return_value))
 
 		return res.success(wrapped_value.set_context(exec_ctx).set_pos(self.pos_start, self.pos_end))
@@ -1034,13 +1026,11 @@ class BuiltInMethod(BaseFunction):
 	def __repr__(self):
 		return f"<Stdlib {self.name}>"
 
-# In Runtime.py, after the 'class List(Value): ...' definition
-
 class PyObject(Value):
 	"""Wrapper for Python object instances (like the File object)."""
 	def __init__(self, py_object):
 		super().__init__()
-		self.py_object = py_object # The actual Python object instance
+		self.py_object = py_object
 
 	def copy(self):
 		copy = PyObject(self.py_object)
@@ -1051,7 +1041,6 @@ class PyObject(Value):
 	def __repr__(self):
 		return repr(self.py_object)
 
-	# Utility function to convert Python types back to interpreter Value types
 	def wrap_py_value(self, py_value):
 		"""Converts a raw Python value to the appropriate Nytescript Value."""
 		if py_value is None:
@@ -1478,8 +1467,9 @@ class Interpreter:
 
 		for element_node in node.element_nodes:
 			elements.append(res.register(self.visit(element_node, context)))
-			if res.should_return(): return res
-
+			if res.should_return():
+				return res
+			
 		return res.success(
 			List(elements).set_context(context).set_pos(node.pos_start, node.pos_end)
 		)
@@ -1844,7 +1834,7 @@ class Interpreter:
 			for name, item in module_scope.items():
 				if name.startswith("__"):
 					continue
-				if isclass(item):
+				elif isclass(item):
 					module_symbol_table.set(name, PyClass(item))
 				elif callable(item):
 					module_symbol_table.set(name, BuiltInMethod(name, item))
@@ -1852,6 +1842,10 @@ class Interpreter:
 					module_symbol_table.set(name, Number(item))
 				elif isinstance(item, str):
 					module_symbol_table.set(name, String(item))
+				elif isinstance(item, list):
+					module_symbol_table.set(name, List([Number(x) if isinstance(x, (int, float)) else String(str(x)) for x in item]))
+				else:
+					module_symbol_table.set(name, PyObject(item))
 					
 			module_value = ModuleValue(module_name, module_symbol_table).set_context(context).set_pos(node.pos_start, node.pos_end)
 			context.symbol_table.set(module_name, module_value)
@@ -1934,6 +1928,9 @@ class Interpreter:
 					wrapped_value = Number(item)
 				elif isinstance(item, str):
 					wrapped_value = String(item)
+				elif isinstance(item, list):
+					wrapped_value = List([Number(x) if isinstance(x, (int, float)) else String(str(x)) for x in item])
+				
 					
 				if wrapped_value:
 					context.symbol_table.set(name, wrapped_value.set_context(context).set_pos(node.pos_start, node.pos_end))
