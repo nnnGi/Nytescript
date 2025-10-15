@@ -17,4 +17,5 @@
  - Both `import` and `include` statements have been rewritten, and imports are now recursive
 
 # 🐞 Bug Fixes:
- - Fixed a Bug allowing KeyboardInterrupts to exit a While Loop
+ - Fixed a Bug allowing Keyboard Interrupts to exit a While Loop
+ - Fixed a Bug where Lists would not display in the Shell
