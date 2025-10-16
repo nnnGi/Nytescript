@@ -85,11 +85,10 @@ def cli() -> None:
 	if len(sys.argv) == 1:
 		shell()
 	elif len(sys.argv) >= 2:
-		if sys.argv[1] != '--version' or '-v':
-			rt = ' '.join(sys.argv[1:])
-			intepreter(rt)
+		if sys.argv[1] != ('--version' or '-v'):
+			intepreter(' '.join(sys.argv[1:]))
 		else:
-			print(Data.VERSION)
+			print(f'Nytescript {Data.VERSION}')
 		
 	else:
 		raise Exception(f"Nytescript CLI Failed")
