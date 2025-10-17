@@ -7,7 +7,7 @@
  - Modified `pass` statement to return NoneType
 
 ## Major Changes:
- - Changed Boolean Logic to use Actual Booleans, a subtype of Numbers that can only be 1 or 0
+ - Changed Boolean Logic to use the `Bool` type, a subtype of Numbers that can only be 1 or 0 (a.k.a. `True` and `False`)
  - Rewrote the Standard Library to be in Python (Grouped into PySTDLIB and CoSTDLIB)
  - Removed `python` module
  - Renamed `fm` -> `fileio`
