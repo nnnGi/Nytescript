@@ -4,7 +4,6 @@ from Lexer import Lexer, Token, Position, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
 from Helper import Help
 from Data import FILE_EXTENSION, STDLIB, os, sys, importlib
-
 from inspect import isclass 
 
 #######################################
@@ -1054,6 +1053,8 @@ class PyObject(Value):
 			return String(py_value)
 		if isinstance(py_value, list):
 			return List([self.wrap_py_value(e) for e in py_value])
+		if isinstance(py_value, bool):
+			return Bool(py_value)
 		if isclass(py_value):
 			return PyClass(py_value)
 		if callable(py_value):
