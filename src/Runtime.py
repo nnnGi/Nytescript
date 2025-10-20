@@ -251,8 +251,11 @@ Number.null = Number(0)
 class Bool(Number):
 	def __init__(self, value):
 		super().__init__(value)
-		self.value = value
-		if self.value not in [0, 1]:
+		if self.value in [0, 1]:
+			self.value = value
+		elif self.value in [True, False]:
+			self.value = 1 if value else 0
+		else:
 			self.value = 0
 	
 	def copy(self):
@@ -1839,7 +1842,7 @@ class Interpreter:
 				elif callable(item):
 					module_symbol_table.set(name, BuiltInMethod(name, item))
 				elif isinstance(item, bool):
-					module_symbol_table.set(name, Bool.true if item else Bool.false)
+					module_symbol_table.set(name, Bool(item))
 				elif isinstance(item, (int, float)):
 					module_symbol_table.set(name, Number(item))
 				elif isinstance(item, str):
@@ -1927,7 +1930,7 @@ class Interpreter:
 				elif callable(item):
 					wrapped_value = BuiltInMethod(name, item)
 				elif isinstance(item, bool):
-					wrapped_value = Bool.true if item else Bool.false
+					wrapped_value = Bool(item)
 				elif isinstance(item, (int, float)):
 					wrapped_value = Number(item)
 				elif isinstance(item, str):
