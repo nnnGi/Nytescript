@@ -1838,6 +1838,8 @@ class Interpreter:
 					module_symbol_table.set(name, PyClass(item))
 				elif callable(item):
 					module_symbol_table.set(name, BuiltInMethod(name, item))
+				elif isinstance(item, bool):
+					module_symbol_table.set(name, Bool.true if item else Bool.false)
 				elif isinstance(item, (int, float)):
 					module_symbol_table.set(name, Number(item))
 				elif isinstance(item, str):
@@ -1924,6 +1926,8 @@ class Interpreter:
 					wrapped_value = PyClass(item)
 				elif callable(item):
 					wrapped_value = BuiltInMethod(name, item)
+				elif isinstance(item, bool):
+					wrapped_value = Bool.true if item else Bool.false
 				elif isinstance(item, (int, float)):
 					wrapped_value = Number(item)
 				elif isinstance(item, str):

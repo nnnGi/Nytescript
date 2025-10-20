@@ -339,7 +339,6 @@ class Lexer:
 			return self.text[peek_idx]
 		return None
 
-
 	def make_identifier(self):
 		id_str = ''
 		pos_start = self.pos.copy()
@@ -419,7 +418,7 @@ class Lexer:
 
 	def skip_comment(self):
 		self.advance()
-
+		
 		try:
 			while self.current_char != ('\n' or None or ''):
 				try:
