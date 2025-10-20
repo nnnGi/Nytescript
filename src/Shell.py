@@ -43,6 +43,8 @@ def shell() -> None:
 		except KeyboardInterrupt:
 			print("^C")
 			continue
+		except:
+			continue
 
 		if text.strip() == "": continue
 		result, error = Runtime.run('<stdin>', text)

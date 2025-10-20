@@ -3,7 +3,7 @@
 #######################################
 
 import string
-import os, sys
+import os, sys, tkinter
 import importlib
 
 #######################################
@@ -50,6 +50,8 @@ STDLIB = {
 	"time":   ("module", "time"),
 	"os":     ("module", "os"),
 	"sys":    ("module", "sys"),
+	"json":   ("module", "json"),
+	"re":     ("module", "re"),
 
     # Type 2: Coded Python Modules
     "strutils": ("code", """
@@ -67,6 +69,12 @@ def cutprefix(s, prefix):
 
 def cutsuffix(s, suffix):
 	return s.removesuffix(suffix)
+				 
+def join(lst, s=''):
+	return s.join(lst)
+
+def replace(s, sub):
+	return s.replace(*sub)
 
 info = "strutils: A simple string utility module."
 """),
@@ -83,6 +91,7 @@ def sort(lst, key=None, reverse=False):
 info = "listutils: A simple list utility module."
 """),
 	"fileio": ("code", """
+import os
 class File:
 	def __init__(self, filename, mode='r'):
 		self.filename = filename
@@ -98,7 +107,12 @@ class File:
 		self.file.close()
 	def __repr__(self):
 		return f"<File at {self.filename} on {self.mode} Mode>"
-			
+
+def exists(filename):
+	return os.path.exists(filename)
+
+def remove(filename):
+	os.remove(filename)			
 info = "fileio: A simple file I/O module using Object-Oriented Programming."
 """),
 }
