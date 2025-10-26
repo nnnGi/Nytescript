@@ -6,7 +6,7 @@ It is a simple, interpreted esoteric programming language (esolang) implemented 
 ### Prerequisites
 
 * **Visual Studio Code (Preferably):** Used because there is an extension at [Nytescript on VSC Marketplace](https://marketplace.visualstudio.com/items?itemName=nnnGitHub.nytescript)
-* **Python 3.12 or higher:** Ensure you have Python installed on your system. You can download it from [Python Downloads](https://www.python.org/downloads/).
+* **Python 3.12 or higher:** Ensure you have Python installed on your system. Preferably 3.13 or 3.14. You can download it from [Python Downloads](https://www.python.org/downloads/).
 
 ### Installation
 1.  Download Executable for Respective OS
