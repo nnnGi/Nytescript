@@ -28,9 +28,9 @@ It is a simple, interpreted esoteric programming language (esolang) implemented 
 Notes: No libraries apart from the standard library are used
 
 # Further Information
-Nytescript Esolang, written by @0xnCubed in Python 3.12.9 and 3.13.2 and 3.13.3	
+Nytescript Esolang, written by @0xnCubed in Python 3.12.9 to Python 3.14.0
 
-It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
+It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan but has a lot added.
 
 This is an interpreted programming Language made in Python named Nytescript. It has essential functions such as
 printing, input, conditional statements, definable functions, while and for loops, switch and try-except statements, and the ability to run files and 
