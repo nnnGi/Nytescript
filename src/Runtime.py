@@ -4,7 +4,6 @@ from Lexer import Lexer, Token, Position, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
 from Helper import Help
 from Data import FILE_EXTENSION, STDLIB, os, sys, importlib
-from inspect import isclass 
 
 #######################################
 # VALUES
@@ -113,7 +112,16 @@ NoneType.none = NoneType()
 class Number(Value):
 	def __init__(self, value):
 		super().__init__()
-		self.value = value
+		if isinstance(value, (int, float)):
+			self.value = value
+		else:
+			try:
+				if '.' in str(value):
+					self.value = float(value)
+				else:
+					self.value = int(value)
+			except ValueError:
+				self.value = 0
 
 	def added_to(self, other):
 		if isinstance(other, Number):
@@ -244,7 +252,6 @@ class Number(Value):
 	def __repr__(self):
 		return str(self.value)
 
-
 Number.null = Number(0)
 
 class Bool(Number):
@@ -275,7 +282,13 @@ Bool.false = Bool(0)
 class String(Value):
 	def __init__(self, value):
 		super().__init__()
-		self.value = value
+		if isinstance(value, str):
+			self.value = value
+		else:
+			try:
+				self.value = str(value)
+			except ValueError:
+				self.value = ""
 
 	def added_to(self, other):
 		if isinstance(other, String):
@@ -363,7 +376,13 @@ class String(Value):
 class List(Value):
 	def __init__(self, elements):
 		super().__init__()
-		self.elements = elements
+		if isinstance(elements, list):
+			self.elements = elements
+		else:
+			try:
+				self.elements = list(elements)
+			except ValueError:
+				self.elements = []
 
 	def added_to(self, other):
 		new_list = self.copy()
@@ -594,7 +613,7 @@ class BuiltInFunction(BaseFunction):
 		return copy
 
 	def __repr__(self):
-		return f"<nytescript {self.name}>"
+		return f"<Built-In {self.name}>"
 
 	#####################################
 
@@ -992,8 +1011,6 @@ class BuiltInMethod(BaseFunction):
 			else:
 				py_args.append(arg)
 
-
-		# 2. Call the actual Python function
 		try:
 			return_value = self.py_func(*py_args)
 		except Exception as e:
@@ -1026,7 +1043,7 @@ class BuiltInMethod(BaseFunction):
 		return copy
 
 	def __repr__(self):
-		return f"<Stdlib {self.name}>"
+		return f"<Standard Library {self.name}>"
 
 class PyObject(Value):
 	"""Wrapper for Python object instances (like the File object)."""
@@ -1055,7 +1072,7 @@ class PyObject(Value):
 			return List([self.wrap_py_value(e) for e in py_value])
 		if isinstance(py_value, bool):
 			return Bool(py_value)
-		if isclass(py_value):
+		if isinstance(py_value, type):
 			return PyClass(py_value)
 		if callable(py_value):
 			return BuiltInMethod(py_value.__name__, py_value)
@@ -1078,7 +1095,7 @@ class PyObject(Value):
 		py_member = getattr(self.py_object, member_name)
 
 		# If the member is callable (a method), wrap it in PyMethod
-		if callable(py_member) and not isclass(py_member):
+		if callable(py_member) and not isinstance(py_member, type):
 			method_wrapper = PyMethod(py_member, self)
 			return method_wrapper.set_context(self.context).set_pos(self.pos_start, self.pos_end), None
 		
@@ -1124,8 +1141,8 @@ class PyMethod(Value):
 	"""Wrapper for Python methods bound to a PyObject instance."""
 	def __init__(self, py_method, instance):
 		super().__init__()
-		self.py_method = py_method # The actual Python method
-		self.instance = instance   # The PyObject instance it is bound to
+		self.py_method = py_method
+		self.instance = instance
 		self.name = py_method.__name__
 
 	def execute(self, args):
@@ -1748,7 +1765,7 @@ class Interpreter:
 			value = res.register(self.visit(node.node_to_return, context))
 			if res.should_return(): return res
 		else:
-			value = Number.null
+			value = NoneType.none
 
 		return res.success_return(value)
 
@@ -1838,7 +1855,7 @@ class Interpreter:
 			for name, item in module_scope.items():
 				if name.startswith("__"):
 					continue
-				elif isclass(item):
+				elif isinstance(item, type):
 					module_symbol_table.set(name, PyClass(item))
 				elif callable(item):
 					module_symbol_table.set(name, BuiltInMethod(name, item))
@@ -1926,7 +1943,7 @@ class Interpreter:
 					continue
 				
 				wrapped_value = None
-				if isclass(item):
+				if isinstance(item, type):
 					wrapped_value = PyClass(item)
 				elif callable(item):
 					wrapped_value = BuiltInMethod(name, item)
@@ -2096,6 +2113,6 @@ def run(fn, text, context=None, new_context=False):
 	except KeyboardInterrupt:
 		return NoneType.none, KeyboardInterrupted(Position(0, 0, 0, fn, text), Position(0, 0, 0, fn, text))
 
-if __name__ == __name__:
+if True:
 	symbols()
 	run('<setup>', '')
