@@ -21,7 +21,7 @@ It is a simple, interpreted esoteric programming language (esolang) implemented 
 2. (Optional) Create a virtual environment:
     ```zsh
 	python -m venv venv
-    source venv/bin/activate  # On Linux/MacOS
+    source /.venv/bin/activate  # On Linux/MacOS
     venv\Scripts\activate  # On Windows
     ```
 
