@@ -1,6 +1,6 @@
 # Nytescript
 ![Python Version](https://img.shields.io/badge/Python-%3E=3.12-blue.svg) \
-It is a simple, interpreted esoteric programming language (esolang) implemented in Python. It's designed to be an easy language to use and remember the syntax for.
+It is a 'simple', interpreted esoteric programming language (Esolang) implemented in Python. It's designed to be an easy language to use and remember the syntax for.
 
 ## Getting Started
 ### Prerequisites
