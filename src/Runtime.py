@@ -2,7 +2,7 @@ from Errors import RTError, RecursiveError, KeyboardInterrupted
 from Parser import Parser, RTResult
 from Lexer import Lexer, Token, Position, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
-from Helper import Help
+from Instance import *
 from Data import FILE_EXTENSION, STDLIB, os, sys, importlib
 
 #######################################
@@ -112,7 +112,7 @@ NoneType.none = NoneType()
 class Number(Value):
 	def __init__(self, value):
 		super().__init__()
-		if isinstance(value, (int, float)):
+		if isnum(value):
 			self.value = value
 		else:
 			try:
@@ -233,7 +233,7 @@ class Number(Value):
 			return None, Value.illegal_operation(self, other)
 
 	def notted(self):
-		return Bool(1 if self.value == 0 else 0).set_context(self.context), None
+		return Bool(self.value == 0).set_context(self.context), None
 
 	def copy(self):
 		copy = Number(self.value)
@@ -282,7 +282,7 @@ Bool.false = Bool(0)
 class String(Value):
 	def __init__(self, value):
 		super().__init__()
-		if isinstance(value, str):
+		if isstr(value):
 			self.value = value
 		else:
 			try:
@@ -376,7 +376,7 @@ class String(Value):
 class List(Value):
 	def __init__(self, elements):
 		super().__init__()
-		if isinstance(elements, list):
+		if islist(elements):
 			self.elements = elements
 		else:
 			try:
@@ -1021,15 +1021,15 @@ class BuiltInMethod(BaseFunction):
 			))
 
 		wrapped_value = None
-		if isinstance(return_value, (int, float)):
+		if isnum(return_value):
 			wrapped_value = Number(return_value)
-		elif isinstance(return_value, str):
+		elif isstr(return_value):
 			wrapped_value = String(return_value)
-		elif isinstance(return_value, bool):
+		elif isbool(return_value):
 			wrapped_value = Bool.true if return_value else Bool.false
-		elif isinstance(return_value, list):
+		elif islist(return_value):
 			wrapped_value = List([Number(item) if isinstance(item, (int, float)) else String(str(item)) for item in return_value])
-		elif return_value is None:
+		elif isnone(return_value):
 			wrapped_value = NoneType.none
 		else:
 			wrapped_value = String(str(return_value))
@@ -1062,23 +1062,22 @@ class PyObject(Value):
 
 	def wrap_py_value(self, py_value):
 		"""Converts a raw Python value to the appropriate Nytescript Value."""
-		if py_value is None:
+		if isnone(py_value):
 			return NoneType.none
-		if isinstance(py_value, (int, float)):
+		if isnum(py_value):
 			return Number(py_value)
-		if isinstance(py_value, str):
+		if isstr(py_value):
 			return String(py_value)
-		if isinstance(py_value, list):
+		if islist(py_value):
 			return List([self.wrap_py_value(e) for e in py_value])
-		if isinstance(py_value, bool):
+		if isbool(py_value):
 			return Bool(py_value)
-		if isinstance(py_value, type):
+		if isclass(py_value):
 			return PyClass(py_value)
-		if callable(py_value):
+		if ismethod(py_value):
 			return BuiltInMethod(py_value.__name__, py_value)
-		
-		# Default wrapper for other complex Python objects
-		return PyObject(py_value)
+		if isobject(py_value):
+			return PyObject(py_value)
 
 	def get_member(self, member_name):
 		res = RTResult()
@@ -1095,7 +1094,7 @@ class PyObject(Value):
 		py_member = getattr(self.py_object, member_name)
 
 		# If the member is callable (a method), wrap it in PyMethod
-		if callable(py_member) and not isinstance(py_member, type):
+		if ismethod(py_member) and not isclass(py_member):
 			method_wrapper = PyMethod(py_member, self)
 			return method_wrapper.set_context(self.context).set_pos(self.pos_start, self.pos_end), None
 		
@@ -1175,7 +1174,7 @@ class PyModule(Value):
 	def __init__(self, name, py_module):
 		super().__init__()
 		self.name = name
-		self.py_module = py_module # The actual Python module object
+		self.py_module = py_module
 
 	def copy(self):
 		copy = PyModule(self.name, self.py_module)
@@ -1186,7 +1185,6 @@ class PyModule(Value):
 	def get_member(self, name):
 		res = RTResult()
 
-		# Check if the member exists in the underlying Python module
 		if not hasattr(self.py_module, name):
 			return None, self.illegal_operation()
 
@@ -1202,24 +1200,29 @@ class PyModule(Value):
 					py_args = [arg.value for arg in args]
 					try:
 						py_result = self.py_func(*py_args)
-						if isinstance(py_result, (int, float)):
+						if isnum(py_result):
 							return res.success(Number(py_result).set_context(self.context))
-						elif isinstance(py_result, str):
+						elif isstr(py_result):
 							return res.success(String(py_result).set_context(self.context))
-						elif isinstance(py_result, list):
-							elements = [Number(x) if isinstance(x, (int, float)) else String(str(x)) for x in py_result]
+						elif islist(py_result):
+							elements = [Number(x) if isnum(x) else List(x) if islist(x) else String(str(x)) for x in py_result]
 							return res.success(List(elements).set_context(self.context))
-						return res.success(NoneType.none)
+						elif isnone(py_result):
+							return res.success(NoneType.none)
 					except Exception as e:
 						return res.failure(RTError(self.pos_start, self.pos_end, f"Error in imported function '{self.name}': {e}", self.context))
 
 			return PyMethodWrapper(name, attr).set_context(self.context).set_pos(self.pos_start, self.pos_end), None
 
-		# Wrap primitive types
-		elif isinstance(attr, (int, float)):
+		elif isnum(attr):
 			return Number(attr).set_context(self.context), None
-		elif isinstance(attr, str):
+		elif isstr(attr):
 			return String(attr).set_context(self.context), None
+		elif islist(attr):
+			elements = [Number(x) if isnum(x) else List(x) if islist(x) else String(str(x)) for x in attr]
+			return List(elements).set_context(self.context), None
+		elif isbool(attr):
+			return Bool(attr).set_context(self.context), None
 		
 		# Fallback for unhandled types
 		return NoneType.none, None
@@ -1329,7 +1332,7 @@ class NytescriptClass(BaseFunction):
 		return res.success(instance)
 
 	def copy(self):
-		copied_methods = {name: meth.copy() for name, meth in self.methods.items()}
+		copied_methods = {name: method.copy() for name, method in self.methods.items()}
 		new_class = NytescriptClass(self.name, copied_methods)
 		new_class.constructor = copied_methods.get("__init__", None)
 		new_class.set_pos(self.pos_start, self.pos_end).set_context(self.context)
@@ -1353,13 +1356,12 @@ class ModuleValue(Value):
 			pos_end = name_tok.pos_end
 		else:
 			member_name = str(name_tok)
-			pos_start = self.pos_start # Use the object's position as a default
+			pos_start = self.pos_start
 			pos_end = self.pos_end
 		
 		if not isinstance(member_name, str) or not member_name:
 			return None, self.illegal_operation()
 
-		# 2. Look up the value using the extracted string name
 		value = self.symbol_table.get(member_name)
 
 		if value is None:
@@ -1855,18 +1857,20 @@ class Interpreter:
 			for name, item in module_scope.items():
 				if name.startswith("__"):
 					continue
-				elif isinstance(item, type):
+				elif isclass(item):
 					module_symbol_table.set(name, PyClass(item))
-				elif callable(item):
+				elif ismethod(item):
 					module_symbol_table.set(name, BuiltInMethod(name, item))
-				elif isinstance(item, bool):
+				elif isbool(item):
 					module_symbol_table.set(name, Bool(item))
-				elif isinstance(item, (int, float)):
+				elif isnum(item):
 					module_symbol_table.set(name, Number(item))
-				elif isinstance(item, str):
+				elif isstr(item):
 					module_symbol_table.set(name, String(item))
-				elif isinstance(item, list):
-					module_symbol_table.set(name, List([Number(x) if isinstance(x, (int, float)) else String(str(x)) for x in item]))
+				elif islist(item):
+					module_symbol_table.set(name, List([Number(x) if isnum(x) else List(x) if islist(x) else String(str(x)) for x in item]))
+				elif isnone(item):
+					module_symbol_table.set(name, NoneType.none)
 				else:
 					module_symbol_table.set(name, PyObject(item))
 					
@@ -1943,19 +1947,22 @@ class Interpreter:
 					continue
 				
 				wrapped_value = None
-				if isinstance(item, type):
+				if isclass(item):
 					wrapped_value = PyClass(item)
-				elif callable(item):
+				elif ismethod(item):
 					wrapped_value = BuiltInMethod(name, item)
-				elif isinstance(item, bool):
+				elif isbool(item):
 					wrapped_value = Bool(item)
-				elif isinstance(item, (int, float)):
+				elif isnum(item):
 					wrapped_value = Number(item)
-				elif isinstance(item, str):
+				elif isstr(item):
 					wrapped_value = String(item)
-				elif isinstance(item, list):
-					wrapped_value = List([Number(x) if isinstance(x, (int, float)) else String(str(x)) for x in item])
-				
+				elif islist(item):
+					wrapped_value = List([Number(x) if isnum(x) else List(x) if islist(x) else String(str(x)) for x in item])
+				elif isnone(item):
+					wrapped_value = NoneType.none
+				else:
+					wrapped_value = PyObject(item)
 					
 				if wrapped_value:
 					context.symbol_table.set(name, wrapped_value.set_context(context).set_pos(node.pos_start, node.pos_end))
@@ -2067,8 +2074,6 @@ class Interpreter:
 		context.symbol_table.define(class_name, class_value)
 		
 		return res.success(class_value)
-
-
 
 #######################################
 # RUN

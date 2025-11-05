@@ -1,5 +1,5 @@
 '''
-Nytescript Shell and Interpreter, written by @0xnCubed in Python 3.12.9, 3.13.2, 3.13.3 and 3.13.5
+Nytescript Shell and Interpreter, written by @0xnCubed in Python 3.12, 3.13 and 3.14.
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 
