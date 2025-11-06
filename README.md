@@ -36,6 +36,4 @@ This is an interpreted programming Language made in Python named Nytescript. It 
 printing, input, conditional statements, definable functions, while and for loops, switch and try-except statements, and the ability to run files and 
 exit the programme.
 
-Nothing needs to be installed except the ```nytescript.py``` and ```shell.py``` file, preferably Python 3.12 and above.
-
 © Copyright @0xnCubed 2025 - 2025
