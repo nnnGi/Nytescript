@@ -15,7 +15,7 @@ LETTERS = string.ascii_letters + '_'
 LETTERS_DIGITS = LETTERS + DIGITS
 VERSION = '0.8.7'
 FILE_EXTENSION = '.ns'
-MODE = 0
+MODE = 1
 LICENSE = """
 MIT License
 
