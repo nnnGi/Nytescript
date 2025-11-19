@@ -2105,7 +2105,7 @@ def run(fn, text, context=None, new_context=False):
 
 	# Display Dev Utility
 	if fn == '<dev>':
-		print(f'{tokens}\n{ast.node.to_string()}')
+		print(f'LEXER: {tokens}\n\nAST {ast.node.to_string()}\n')
 
 	# Run Nytescript
 	interpreter = Interpreter()
