@@ -419,6 +419,7 @@ class ClassDefNode(Node):
 		name = self.class_name_tok.value
 		parent = self.parent_class_tok.value if self.parent_class_tok else 'None'
 		s = f'{"  " * indent}ClassDefNode (Name: {name}, Parent: {parent}):\n'
-		s += f'{"  " * (indent + 1)}Body:\n'
-		s += self.body_node.to_string(indent + 2)
+		s += f'{"  " * (indent + 1)}Methods:\n'
+		for item in self.method_nodes:
+			s += item.to_string(indent + 2) + '\n'
 		return s.rstrip()
