@@ -51,7 +51,7 @@ class TemplateStringNode(Node):
 		for segment in self.segments:
 			s += f'{"  " * (indent + 1)}Segment:\n'
 			s += segment.to_string(indent + 2) + '\n'
-		return s.strip()
+		return s.rstrip()
 
 class ListNode(Node):
 	def __init__(self, element_nodes, pos_start, pos_end):
@@ -67,7 +67,7 @@ class ListNode(Node):
 		s = f'{"  " * indent}ListNode:\n'
 		for node in self.element_nodes:
 			s += f'{node.to_string(indent + 1)}\n'
-		return s.strip()
+		return s.rstrip()
 
 class VarAccessNode(Node):
 	def __init__(self, var_name_tok):
@@ -94,8 +94,7 @@ class VarAssignNode(Node):
 		return f'VarAssign({self.var_name_tok}, {self.value_node})'
 	
 	def to_string(self, indent=0):
-		const_str = 'const' if self.is_const else 'var'
-		s = f'{"  " * indent}{const_str}AssignNode: {self.var_name_tok.value}\n'
+		s = f'{"  " * indent}VarAssignNode: {self.var_name_tok.value}\n'
 		s += f'{"  " * (indent + 1)}Value:\n'
 		s += self.value_node.to_string(indent + 2)
 		return s
@@ -155,19 +154,17 @@ class IfNode(Node):
 			s += f'{"  " * (indent + 2)}Body:' + '\n'
 			for item in expr.element_nodes:
 				s += item.to_string(indent + 3) + '\n'
-			# s += expr.to_string(indent + 3) + '\n]\n'
 			s += f'{"  " * (indent + 2)}Evaluation:\n'
 			s += f'{"  " * (indent + 3)}{result}\n'
 		if self.else_case:
 			s += f'{"  " * (indent + 1)}Else Case:\n'
 			expr, result = self.else_case
 			s += f'{"  " * (indent + 2)}Body:\n'
-			# s += expr.to_string(indent + 3) + '\n'
 			for item in expr.element_nodes:
 				s += item.to_string(indent + 3) + '\n'
 			s += f'{"  " * (indent + 2)}Evaluation:\n'
 			s += f'{"  " * (indent + 3)}{result}\n'
-		return s.strip()
+		return s.rstrip()
 
 class ForNode(Node):
 	def __init__(self, var_name_tok, start_value_node, end_value_node, step_value_node, body_node, should_return_null):
@@ -191,8 +188,9 @@ class ForNode(Node):
 			s += f'{"  " * (indent + 1)}Step:\n'
 			s += self.step_value_node.to_string(indent + 2) + '\n'
 		s += f'{"  " * (indent + 1)}Body:\n'
-		s += self.body_node.to_string(indent + 2)
-		return s.strip()
+		for item in self.body_node.element_nodes:
+			s += item.to_string(indent + 2)
+		return s.rstrip()
 
 class WhileNode(Node):
 	def __init__(self, condition_node, body_node, should_return_null):
@@ -208,8 +206,9 @@ class WhileNode(Node):
 		s += f'{"  " * (indent + 1)}Condition:\n'
 		s += self.condition_node.to_string(indent + 2) + '\n'
 		s += f'{"  " * (indent + 1)}Body:\n'
-		s += self.body_node.to_string(indent + 2)
-		return s.strip()
+		for item in self.body_node.element_nodes:
+			s += item.to_string(indent + 2)
+		return s.rstrip()
 
 class FuncDefNode(Node):
 	def __init__(self, var_name_tok, arg_name_toks, body_node, should_auto_return):
@@ -233,7 +232,7 @@ class FuncDefNode(Node):
 		s = f'{"  " * indent}FuncDefNode (Name: {name}, Args: {args}, AutoReturn: {self.should_auto_return}):\n'
 		s += f'{"  " * (indent + 1)}Body:\n'
 		s += self.body_node.to_string(indent + 2)
-		return s.strip()
+		return s.rstrip()
 
 
 class CallNode(Node):
@@ -258,7 +257,7 @@ class CallNode(Node):
 				s += arg.to_string(indent + 2) + '\n'
 		else:
 			s += f'{"  " * (indent + 1)}Arguments: None'
-		return s.strip()
+		return s.rstrip()
 
 class ReturnNode(Node):
 	def __init__(self, node_to_return, pos_start, pos_end):
@@ -270,7 +269,7 @@ class ReturnNode(Node):
 	def to_string(self, indent=0):
 		s = f'{"  " * indent}ReturnNode:\n'
 		s += self.node_to_return.to_string(indent + 1)
-		return s.strip()
+		return s.rstrip()
 
 class ContinueNode(Node):
 	def __init__(self, pos_start, pos_end):
@@ -300,19 +299,21 @@ class SwitchNode(Node):
 	def to_string(self, indent=0):
 		s = f'{"  " * indent}SwitchNode:\n'
 		s += f'{"  " * (indent + 1)}Condition:\n'
-		s += self.condition_node.to_string(indent + 2) + '\n'
+		s += self.expression_node.to_string(indent + 2) + '\n'
 		
 		s += f'{"  " * (indent + 1)}Cases:\n'
 		for value, body in self.cases:
 			s += f'{"  " * (indent + 2)}Case Value:\n'
 			s += value.to_string(indent + 3) + '\n'
 			s += f'{"  " * (indent + 2)}Case Body:\n'
-			s += body.to_string(indent + 3) + '\n'
+			for item in body.element_nodes:
+				s += item.to_string(indent + 3) + '\n'
 
 		if self.default_case:
 			s += f'{"  " * (indent + 1)}Default:\n'
-			s += self.default_case.to_string(indent + 2)
-		return s.strip()
+			for item in self.default_case.element_nodes:
+				s += item.to_string(indent + 2)
+		return s.rstrip()
 
 class TryExceptNode(Node):
 	def __init__(self, try_body_node, except_body_node):
@@ -325,13 +326,10 @@ class TryExceptNode(Node):
 	def to_string(self, indent=0):
 		s = f'{"  " * indent}TryExceptNode:\n'
 		s += f'{"  " * (indent + 1)}Try Block:\n'
-		s += self.try_node.to_string(indent + 2) + '\n'
+		s += self.try_body_node.to_string(indent + 2) + '\n'
 		s += f'{"  " * (indent + 1)}Except Block (Error Var: {self.error_var_tok.value if self.error_var_tok else "None"}):\n'
-		s += self.except_node.to_string(indent + 2) + '\n'
-		if self.else_node:
-			s += f'{"  " * (indent + 1)}Else Block:\n'
-			s += self.else_node.to_string(indent + 2)
-		return s.strip()
+		s += self.except_body_node.to_string(indent + 2) + '\n'
+		return s.rstrip()
 
 class PassNode(Node):
 	def __init__(self, pos_start, pos_end):
@@ -384,7 +382,7 @@ class MemberAccessNode(Node):
 		s = f'{"  " * indent}MemberAccessNode (Member: {self.member_name_tok.value}):\n'
 		s += f'{"  " * (indent + 1)}Object:\n'
 		s += self.object_node.to_string(indent + 2)
-		return s.strip()
+		return s.rstrip()
 	
 class MemberAssignNode(Node):
 	def __init__(self, object_node, member_name_tok, value_node):
@@ -403,7 +401,7 @@ class MemberAssignNode(Node):
 		s += self.object_node.to_string(indent + 2) + '\n'
 		s += f'{"  " * (indent + 1)}Value:\n'
 		s += self.value_node.to_string(indent + 2)
-		return s.strip()
+		return s.rstrip()
 
 class ClassDefNode(Node):
 	def __init__(self, class_name_tok, method_nodes, pos_start, pos_end):
@@ -421,4 +419,4 @@ class ClassDefNode(Node):
 		s = f'{"  " * indent}ClassDefNode (Name: {name}, Parent: {parent}):\n'
 		s += f'{"  " * (indent + 1)}Body:\n'
 		s += self.body_node.to_string(indent + 2)
-		return s.strip()
+		return s.rstrip()
