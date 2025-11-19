@@ -5,13 +5,14 @@
  - Added `license` keyword to view license
  - Modified `exit()` method to include exit codes (0-255)
  - Modified `pass` statement to return NoneType
+ - Renamed `fm` -> `fileio`
+ - Renamed `str` -> `strutils`
+ - Added Dev Utilities activated from changing the `MODE` Constant in the `Data.py` file to 0
 
 ## Major Changes:
  - Changed Boolean Logic to use the `Bool` type, a subtype of Numbers that can only be 1 or 0 (a.k.a. `True` and `False`)
  - Rewrote the Standard Library to be in Python (Grouped into PySTDLIB and CoSTDLIB)
  - Removed `python` module
- - Renamed `fm` -> `fileio`
- - Renamed `str` -> `strutils`
  - Added `listutils`
  - Added Inbuilt Python Libraries of `math`, `time`, `random`, `os`, `sys`, `json` and `re` to the Standard Library
  - Both `import` and `include` statements have been rewritten, and imports are now recursive
