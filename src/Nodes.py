@@ -326,9 +326,11 @@ class TryExceptNode(Node):
 	def to_string(self, indent=0):
 		s = f'{"  " * indent}TryExceptNode:\n'
 		s += f'{"  " * (indent + 1)}Try Block:\n'
-		s += self.try_body_node.to_string(indent + 2) + '\n'
-		s += f'{"  " * (indent + 1)}Except Block (Error Var: {self.error_var_tok.value if self.error_var_tok else "None"}):\n'
-		s += self.except_body_node.to_string(indent + 2) + '\n'
+		for item in self.try_body_node.element_nodes:
+			s += item.to_string(indent + 2) + '\n'
+		s += f'{"  " * (indent + 1)}Except Block:\n'
+		for item in self.except_body_node.element_nodes:
+			s += item.to_string(indent + 2) + '\n'
 		return s.rstrip()
 
 class PassNode(Node):
