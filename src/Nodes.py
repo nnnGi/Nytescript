@@ -5,6 +5,7 @@ from Data import sys
 #######################################
 
 class Node:
+	
 	def to_string(self, indent=0):
 		"""Base method for string representation, to be overridden by subclasses."""
 		return f'{"  " * indent}{self.__class__.__name__}'
@@ -60,7 +61,7 @@ class ListNode(Node):
 		self.pos_end = pos_end
 	
 	def __repr__(self):
-		return f'[{','.join(self.element_nodes)}]'
+		return f'[{','.join(self.element_nodes.__repr__())}]'
 	
 	def to_string(self, indent=0):
 		s = f'{"  " * indent}ListNode:\n'
@@ -146,16 +147,26 @@ class IfNode(Node):
 
 	def to_string(self, indent=0):
 		s = f'{"  " * indent}IfNode:\n'
-		for i, (condition, expr) in enumerate(self.cases):
+		for i, (condition, expr, result) in enumerate(self.cases):
 			case_type = "If" if i == 0 else "Elif"
 			s += f'{"  " * (indent + 1)}{case_type} Case:\n'
 			s += f'{"  " * (indent + 2)}Condition:\n'
 			s += condition.to_string(indent + 3) + '\n'
-			s += f'{"  " * (indent + 2)}Body:\n'
-			s += expr.to_string(indent + 3) + '\n'
+			s += f'{"  " * (indent + 2)}Body:' + '\n'
+			for item in expr.element_nodes:
+				s += item.to_string(indent + 3) + '\n'
+			# s += expr.to_string(indent + 3) + '\n]\n'
+			s += f'{"  " * (indent + 2)}Evaluation:\n'
+			s += f'{"  " * (indent + 3)}{result}\n'
 		if self.else_case:
 			s += f'{"  " * (indent + 1)}Else Case:\n'
-			s += self.else_case.to_string(indent + 2)
+			expr, result = self.else_case
+			s += f'{"  " * (indent + 2)}Body:\n'
+			# s += expr.to_string(indent + 3) + '\n'
+			for item in expr.element_nodes:
+				s += item.to_string(indent + 3) + '\n'
+			s += f'{"  " * (indent + 2)}Evaluation:\n'
+			s += f'{"  " * (indent + 3)}{result}\n'
 		return s.strip()
 
 class ForNode(Node):
