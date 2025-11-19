@@ -72,7 +72,7 @@ def intepreter(fn) -> None:
 		with open(fn, "r") as f:
 			script = f.read()
 			if not script.strip() == '':
-				_, error = Runtime.run('<program>', script)
+				_, error = Runtime.run('<dev>' if Data.MODE == 0 else '<program>', script)
 				if error:
 					print(error.as_string())
 				del _
