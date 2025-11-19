@@ -47,7 +47,7 @@ def shell() -> None:
 			continue
 
 		if text.strip() == "": continue
-		result, error = Runtime.run('<stdin>', text)
+		result, error = Runtime.run('<dev>' if Data.MODE == 0 else '<stdin>', text)
 		if error:
 			print(error.as_string())
 		elif result:

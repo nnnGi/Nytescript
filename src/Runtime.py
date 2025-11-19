@@ -2103,6 +2103,10 @@ def run(fn, text, context=None, new_context=False):
 	ast = parser.parse()
 	if ast.error: return None, ast.error
 
+	# Display Dev Utility
+	if fn == '<dev>':
+		print(f'{tokens}\n{ast.node.to_string()}')
+
 	# Run Nytescript
 	interpreter = Interpreter()
 	if context is None:
@@ -2114,10 +2118,12 @@ def run(fn, text, context=None, new_context=False):
 
 	try:
 		result = interpreter.visit(ast.node, context)
-		return result.value, result.error
 	except KeyboardInterrupt:
-		return NoneType.none, KeyboardInterrupted(Position(0, 0, 0, fn, text), Position(0, 0, 0, fn, text))
+		error = KeyboardInterrupted(ast.node.pos_start, ast.node.pos_end, context)
+		return None, error
+		
+	return result.value, result.error
 
 if True:
 	symbols()
-	run('<setup>', '')
+	# run('<setup>', '')

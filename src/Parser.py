@@ -109,7 +109,6 @@ class Parser:
 				more_statements = False
 				continue
 			statements.append(statement)
-
 		return res.success(ListNode(
 			statements,
 			pos_start,
