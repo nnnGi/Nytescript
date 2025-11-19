@@ -417,8 +417,7 @@ class ClassDefNode(Node):
 
 	def to_string(self, indent=0):
 		name = self.class_name_tok.value
-		parent = self.parent_class_tok.value if self.parent_class_tok else 'None'
-		s = f'{"  " * indent}ClassDefNode (Name: {name}, Parent: {parent}):\n'
+		s = f'{"  " * indent}ClassDefNode (Name: {name}):\n'
 		s += f'{"  " * (indent + 1)}Methods:\n'
 		for item in self.method_nodes:
 			s += item.to_string(indent + 2) + '\n'
