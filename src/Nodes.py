@@ -231,7 +231,8 @@ class FuncDefNode(Node):
 		args = ', '.join([t.value for t in self.arg_name_toks])
 		s = f'{"  " * indent}FuncDefNode (Name: {name}, Args: {args}, AutoReturn: {self.should_auto_return}):\n'
 		s += f'{"  " * (indent + 1)}Body:\n'
-		s += self.body_node.to_string(indent + 2)
+		for item in self.body_node.element_nodes:
+			s += item.to_string(indent + 2) + '\n'
 		return s.rstrip()
 
 
