@@ -27,7 +27,6 @@
  - Fixed a Bug where Comments could not be on the same line as other pieces of code
 
 ## 🚧 Behind the Scenes:
- - Comments are now processed as their own tokens and are processed as PassNodes
- - The AST Nodes have better Display Functionalities
- - Comments have Newline Buffers on Both Sides
- - Python Objects are now wrapped in Nytescript (Refer to PyObject)
+ - Comments are now processed as their own tokens and are processed as PassNodes by the AST
+ - `COMMENT` tokens have `NEWLINE` Buffers on Both Sides
+ - Python Objects are now wrapped in Nytescript (Refer to `PyObject`)
