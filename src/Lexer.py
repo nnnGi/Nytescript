@@ -138,10 +138,9 @@ class Lexer:
 				case self.current_char if self.current_char in ' \t':
 					self.advance()
 				case self.current_char if self.current_char in '#£¥€':
-					try:
-						self.skip_comment()
-					except KeyboardInterrupt:
-						self.advance()
+					tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
+					tokens.append(self.skip_comment())
+					tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
 				case self.current_char if self.current_char in ';\n':
 					tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
 					self.advance()
@@ -417,15 +416,12 @@ class Lexer:
 		return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
 	def skip_comment(self):
+		pos_start = self.pos.copy()
 		self.advance()
 		
-		try:
-			while self.current_char != ('\n' or None or ''):
-				try:
-					self.advance()
-				except KeyboardInterrupt:
-					break
-		except KeyboardInterrupt:
-			pass
+		while self.current_char not in (None, '\n'):
+			self.advance()
 		
 		self.advance()
+
+		return Token(TT_COMMENT, pos_start=pos_start, pos_end=self.pos)

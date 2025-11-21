@@ -5,6 +5,7 @@
 import string
 import os, sys, tkinter
 import importlib
+from pprint import pp
 
 #######################################
 # CONSTANTS
@@ -88,6 +89,9 @@ def filter(func, lst):
 
 def sort(lst, key=None, reverse=False):
 	return sorted(lst, key=key, reverse=reverse)
+			   
+def count(lst, item):
+	return lst.count(item)
 			   
 info = "listutils: A simple list utility module."
 """),

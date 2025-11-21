@@ -57,7 +57,6 @@ class InvalidSyntaxError(Error):
 class KeyboardInterrupted(Error):
 	def __init__(self, pos_start, pos_end, details=''):
 		super().__init__(pos_start, pos_end, 'KeyboardInterrupt', details)
-		print()
 
 class RecursiveError(Error):
 	def __init__(self, pos_start, pos_end, details, context):

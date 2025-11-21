@@ -1,9 +1,9 @@
 from Errors import RTError, RecursiveError, KeyboardInterrupted
 from Parser import Parser, RTResult
-from Lexer import Lexer, Token, Position, KEYWORDS, SYMBOL_TABLE
+from Lexer import Lexer, Token, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
 from Instance import *
-from Data import FILE_EXTENSION, STDLIB, os, sys, importlib
+from Data import FILE_EXTENSION, STDLIB, os, sys, importlib, pp
 
 #######################################
 # VALUES
@@ -2098,14 +2098,19 @@ def run(fn, text, context=None, new_context=False):
 	tokens, error = lexer.tokeniser()
 	if error: return None, error
 
+	# Display Lexer Utility
+	if fn == '<dev>':
+		print(f'LEXER:')
+		pp(tokens, compact=True)
+
 	# Generate AST
 	parser = Parser(tokens)
 	ast = parser.parse()
 	if ast.error: return None, ast.error
 
-	# Display Dev Utility
+	# Display AST Utility
 	if fn == '<dev>':
-		print(f'LEXER: {tokens}\n\nAST {ast.node.to_string()}\n')
+		print(f'\nAST {ast.node.to_string()}\n')
 
 	# Run Nytescript
 	interpreter = Interpreter()
@@ -2116,11 +2121,7 @@ def run(fn, text, context=None, new_context=False):
 		context = Context('<module>', context, None)
 		context.symbol_table = SymbolTable(context.parent.symbol_table)
 
-	try:
-		result = interpreter.visit(ast.node, context)
-	except KeyboardInterrupt:
-		error = KeyboardInterrupted(ast.node.pos_start, ast.node.pos_end, context)
-		return None, error
+	result = interpreter.visit(ast.node, context)
 		
 	return result.value, result.error
 

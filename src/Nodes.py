@@ -5,7 +5,6 @@ from Data import sys
 #######################################
 
 class Node:
-	
 	def to_string(self, indent=0):
 		"""Base method for string representation, to be overridden by subclasses."""
 		return f'{"  " * indent}{self.__class__.__name__}'

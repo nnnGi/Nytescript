@@ -69,7 +69,7 @@ class Parser:
 
 	def parse(self):
 		res = self.statements()
-		if not res.error and self.current_tok.type != TT_EOF:
+		if (not res.error) and (self.current_tok.type != TT_EOF):
 			return res.failure(InvalidSyntaxError(
 				self.current_tok.pos_start, self.current_tok.pos_end,
 				"Token cannot appear after previous tokens"
@@ -169,6 +169,10 @@ class Parser:
 			if res.error: return res
 			return res.success(include_node)
 
+		if self.current_tok.matches(TT_COMMENT, self.current_tok.value):
+			res.register_advancement()
+			self.advance()
+			return res.success(PassNode(pos_start, self.current_tok.pos_start.copy()))
 
 		expr = res.register(self.expr())
 		if res.error:
