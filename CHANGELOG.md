@@ -8,6 +8,8 @@
  - Renamed `fm` -> `fileio`
  - Renamed `str` -> `strutils`
  - Added Dev Utilities activated from changing the `MODE` Constant in the `Data.py` file to 0
+     - Displays Lexer using `pprint` and the Pretty Print feature
+     - Displays AST
 
 ## Major Changes:
  - Changed Boolean Logic to use the `Bool` type, a subtype of Numbers that can only be 1 or 0 (a.k.a. `True` and `False`)
@@ -20,3 +22,12 @@
 # 🐞 Bug Fixes:
  - Fixed a Bug allowing Keyboard Interrupts to exit a While Loop
  - Fixed a Bug where Lists would not display in the Shell
+ - Fixed a Bug where Comments would exit in the Shell
+ - Fixed a Bug where Keyboard Interrupts would print out lots of empty lines
+ - Fixed a Bug where Comments could not be on the same line as other pieces of code
+
+## 🚧 Behind the Scenes:
+ - Comments are now processed as their own tokens and are processed as PassNodes
+ - The AST Nodes have better Display Functionalities
+ - Comments have Newline Buffers on Both Sides
+ - Python Objects are now wrapped in Nytescript (Refer to PyObject)
