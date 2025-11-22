@@ -25,6 +25,7 @@
  - Fixed a Bug where Comments would exit in the Shell
  - Fixed a Bug where Keyboard Interrupts would print out lots of empty lines
  - Fixed a Bug where Comments could not be on the same line as other pieces of code
+ - Fixed a Bug where trying to access Non-Existent methods from submodules would Crash
 
 ## 🚧 Behind the Scenes:
  - Comments are now processed as their own tokens and are processed as PassNodes by the AST
