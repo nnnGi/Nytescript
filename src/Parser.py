@@ -48,7 +48,8 @@ class ParseResult:
 #######################################
 
 class Parser:
-	def __init__(self, tokens):
+	def __init__(self, fn, tokens):
+		self.fn = fn
 		self.tokens = tokens
 		self.tok_idx = -1
 		self.advance()
@@ -69,6 +70,10 @@ class Parser:
 
 	def parse(self):
 		res = self.statements()
+		
+		if self.fn == '<dev>':
+			print(f'\nAST {res.node.to_string()}\n')
+
 		if (not res.error) and (self.current_tok.type != TT_EOF):
 			return res.failure(InvalidSyntaxError(
 				self.current_tok.pos_start, self.current_tok.pos_end,
