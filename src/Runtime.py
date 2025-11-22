@@ -3,7 +3,7 @@ from Parser import Parser, RTResult
 from Lexer import Lexer, Token, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
 from Instance import *
-from Data import FILE_EXTENSION, STDLIB, os, sys, importlib, pp
+from Data import FILE_EXTENSION, STDLIB, os, sys, importlib
 
 #######################################
 # VALUES
@@ -1725,17 +1725,23 @@ class Interpreter:
 		try:
 			original_callable_node = node.node_to_call 
 			value_to_call = res.register(self.visit(original_callable_node, context))
+			if value_to_call == None:
+				return res.failure(RTError(
+					node.pos_start, node.pos_end,
+					f'Invalid Value to Call',
+					context
+				))
 			if res.should_return(): return res
 			
 			was_class_call = isinstance(value_to_call, NytescriptClass)
 
-
+			
 			for arg_node in node.arg_nodes:
 				args.append(res.register(self.visit(arg_node, context)))
 				if res.should_return(): return res
 
-			return_rt_result = value_to_call.execute(args) 
-	
+			return_rt_result = value_to_call.execute(args)
+
 			if not isinstance(return_rt_result, RTResult):
 				problematic_value = return_rt_result
 				if isinstance(problematic_value, Value):
@@ -1743,6 +1749,7 @@ class Interpreter:
 				return res.success(problematic_value)
 
 			final_value_from_call = res.register(return_rt_result)
+			
 			if res.should_return(): 
 				return res 
 			
@@ -2098,19 +2105,10 @@ def run(fn, text, context=None, new_context=False):
 	tokens, error = lexer.tokeniser()
 	if error: return None, error
 
-	# Display Lexer Utility
-	if fn == '<dev>':
-		print(f'LEXER:')
-		pp(tokens, compact=True)
-
 	# Generate AST
-	parser = Parser(tokens)
+	parser = Parser(fn, tokens)
 	ast = parser.parse()
 	if ast.error: return None, ast.error
-
-	# Display AST Utility
-	if fn == '<dev>':
-		print(f'\nAST {ast.node.to_string()}\n')
 
 	# Run Nytescript
 	interpreter = Interpreter()
