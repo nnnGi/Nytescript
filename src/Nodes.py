@@ -230,10 +230,12 @@ class FuncDefNode(Node):
 		args = ', '.join([t.value for t in self.arg_name_toks])
 		s = f'{"  " * indent}FuncDefNode (Name: {name}, Args: {args}, AutoReturn: {self.should_auto_return}):\n'
 		s += f'{"  " * (indent + 1)}Body:\n'
-		for item in self.body_node.element_nodes:
-			s += item.to_string(indent + 2) + '\n'
+		if not isinstance(self.body_node, CallNode):
+			for item in self.body_node.element_nodes:
+				s += item.to_string(indent + 2) + '\n'
+		else:
+			s += self.body_node.to_string(indent + 2) + '\n'
 		return s.rstrip()
-
 
 class CallNode(Node):
 	def __init__(self, node_to_call, arg_nodes):
