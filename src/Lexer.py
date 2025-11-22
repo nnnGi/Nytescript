@@ -1,5 +1,5 @@
 from Errors import ExpectedCharError, IllegalCharError, InvalidSyntaxError
-from Data import DIGITS, LETTERS, LETTERS_DIGITS
+from Data import DIGITS, LETTERS, LETTERS_DIGITS, pp
 from Tokens import *
 
 #######################################
@@ -213,6 +213,11 @@ class Lexer:
 					return [], IllegalCharError(pos_start, self.pos, "'" + char + "'")
 
 		tokens.append(Token(TT_EOF, pos_start=self.pos))
+
+		if self.fn == '<dev>':
+			print(f'LEXER:', end='')
+			pp(tokens, compact=True)
+
 		return tokens, None
 
 	def make_number(self):
