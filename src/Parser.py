@@ -497,7 +497,7 @@ class Parser:
 							error.pos_end.col += expr_pos_start.col
 						return res.failure(error)
 
-					expr_parser = Parser(expr_tokens)
+					expr_parser = Parser(self.tokens[0].pos_start.fn, expr_tokens)
 					expr_node = res.register(expr_parser.expr())
 					if res.error:
 						if res.error.pos_start:
