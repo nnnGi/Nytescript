@@ -24,7 +24,7 @@ def islist(obj: any) -> bool:
 	return isinstance(obj, list)
 
 def isnone(obj: any) -> bool:
-	return any is None
+	return obj is None
 
 def isobject(obj: any) -> bool:
 	return isinstance(obj, object)
