@@ -115,7 +115,7 @@ class BinOpNode(Node):
 		s += f'{"  " * (indent + 1)}Left:\n'
 		s += self.left_node.to_string(indent + 2) + '\n'
 		s += f'{"  " * (indent + 1)}Right:\n'
-		s += self.right_node.to_string(indent + 2) + '\n'
+		s += self.right_node.to_string(indent + 2)
 		return s
 
 class UnaryOpNode(Node):
@@ -203,10 +203,10 @@ class WhileNode(Node):
 	def to_string(self, indent=0):
 		s = f'{"  " * indent}WhileNode:\n'
 		s += f'{"  " * (indent + 1)}Condition:\n'
-		s += self.condition_node.to_string(indent + 2)
+		s += self.condition_node.to_string(indent + 2) + '\n'
 		s += f'{"  " * (indent + 1)}Body:\n'
 		for item in self.body_node.element_nodes:
-			s += item.to_string(indent + 2)
+			s += item.to_string(indent + 2) + '\n'
 		return s.rstrip()
 
 class FuncDefNode(Node):
