@@ -486,7 +486,7 @@ class Parser:
 					segments.append(StringNode(Token(TT_STRING, segment_content, segment_pos_start, segment_pos_end)))
 				elif segment_type == 'expr_content':
 					expr_pos_start = pos_start.copy().advance(self.tokens[self.tok_idx].pos_start.idx - pos_start.idx + segment_content.find(segment_content))
-					expr_lexer = Lexer(self.tokens[0].pos_start.fn, segment_content)
+					expr_lexer = Lexer('<fstring>', segment_content)
 					expr_tokens, error = expr_lexer.tokeniser()
 					if error:
 						if error.pos_start:
@@ -497,7 +497,7 @@ class Parser:
 							error.pos_end.col += expr_pos_start.col
 						return res.failure(error)
 
-					expr_parser = Parser(self.tokens[0].pos_start.fn, expr_tokens)
+					expr_parser = Parser('<fstring>', expr_tokens)
 					expr_node = res.register(expr_parser.expr())
 					if res.error:
 						if res.error.pos_start:
