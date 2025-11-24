@@ -1,0 +1,15 @@
+var n = input_int()
+
+switch n then
+	case 1 then
+		print('You typed in "1"')
+	end
+
+	case 2 then
+		print('You typed in "2"')
+	end
+
+	default then
+		print('I have no idea what you just typed')
+	end
+end
