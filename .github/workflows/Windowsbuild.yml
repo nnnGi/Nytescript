@@ -29,10 +29,8 @@ jobs:
         uses: Nuitka/Nuitka-Action@main
         with:
           script-name: src/Shell.py
-          # The key flags for your desired output:
-          options: |
-            --mode=onefile
-            --output-filename=nytescript
+          mode: onefile
+          output-file: nytescript
             
       - name: ⬆️ Upload Windows Artifact
         uses: actions/upload-artifact@v4
