@@ -16,7 +16,7 @@ jobs:
       - name: 🐍 Setup Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.13.7'
           architecture: 'x64' 
           
       - name: Install Dependencies
@@ -36,5 +36,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nytescript-posix-exe
-          # The path points to the directory created by --macos-create-app-bundle
           path: dist/nytescript
