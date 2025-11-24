@@ -3,7 +3,7 @@
 #######################################
 
 import string
-import os, sys, tkinter
+import os, sys
 import importlib
 from pprint import pp
 
