@@ -1066,8 +1066,9 @@ class Parser:
 						f"Expected NEWLINE after '{KEYWORDS[13]}' for case body"
 					))
 
-				res.register_advancement()
-				self.advance()
+				while self.current_tok.type == TT_NEWLINE:
+					res.register_advancement()
+					self.advance()
 
 				cases.append((condition_node, body_node))
 
@@ -1118,8 +1119,9 @@ class Parser:
 						f"Expected NEWLINE after '{KEYWORDS[13]}' for {KEYWORDS[19]} body"
 					))
 
-				res.register_advancement()
-				self.advance()
+				while self.current_tok.type == TT_NEWLINE:
+					res.register_advancement()
+					self.advance()
 
 				default_case = body_node
 
