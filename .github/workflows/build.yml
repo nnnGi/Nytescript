@@ -1,0 +1,44 @@
+name: Nuitka Windows Build
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Use a Windows runner for native compilation
+    runs-on: windows-latest 
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          architecture: 'x64' 
+          
+      # Install any necessary Python packages (e.g., requests, tkinter)
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install nuitka zstandard # Nuitka-Action will install Nuitka, but this is a good safety step
+
+      - name: ⚙️ Build Windows Executable with Nuitka-Action
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          script-name: src/Shell.py
+          # The key flags for your desired output:
+          options: |
+            --standalone
+            --onefile
+            --output-filename=nytescript
+            --mingw64 # Use the automatically downloaded MinGW64 toolchain
+            
+      - name: ⬆️ Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nytescript-windows-exe
+          # Nuitka-Action places the executable in the 'build' folder
+          path: dist/nytescript.exe
