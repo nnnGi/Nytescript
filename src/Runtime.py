@@ -437,12 +437,13 @@ class List(Value):
 		else:
 			return None, Value.illegal_operation(self, other)
 
+	#FIX THIS PLS
 	def powed_by(self, other):
 		if isinstance(other, Number):
 			if not isinstance(other.value, int) or other.value == 0:
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'List slicing step requires a non-zero integer',
+					'List stepping requires a non-zero integer',
 					self.context
 				)
 			try:
@@ -450,7 +451,7 @@ class List(Value):
 			except:
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'List slicing with step failed',
+					'List stepping failed',
 					self.context
 				)
 		else:
@@ -484,10 +485,111 @@ class List(Value):
 		return len(self.elements) > 0
 
 	def __str__(self):
-		return ", ".join([str(x) for x in self.elements])
+		return f'[{", ".join([str(x) for x in self.elements])}]'
 
 	def __repr__(self):
 		return f'[{", ".join([repr(x) for x in self.elements])}]'
+	
+class Tuple(Value):
+	def __init__(self, items):
+		super().__init__()
+		if istuple(items):
+			self.items = items
+		else:
+			try:
+				self.items = tuple(items)
+			except ValueError:
+				self.items = ()
+
+	def added_to(self, other):
+		if isinstance(other, Tuple):
+			new_list = self.copy()
+			new_list.items += other.items
+			return new_list, None
+		else:
+			return None, Value.illegal_operation(self, other)
+	
+	def multed_by(self, other):
+		if isinstance(other, Number):
+			new_list = self.copy()
+			for _ in range(other.value):
+				new_list.items.extend(self.items)
+			return new_list, None
+		else:
+			return None, Value.illegal_operation(self, other)
+		
+	def dived_by(self, other):
+		if isinstance(other, Number):
+			if not isinstance(other.value, int):
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'Tuple indexing requires an integer',
+					self.context
+				)
+			try:
+				return self.items[other.value], None
+			except IndexError:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'Tuple index out of bounds',
+					self.context
+				)
+		else:
+			return None, Value.illegal_operation(self, other)
+		
+	#FIX THIS PLS
+	def powed_by(self, other):
+		if isinstance(other, Number):
+			if not isinstance(other.value, int) or other.value == 0:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'Tuple Slicing requires a non-zero integer',
+					self.context
+				)
+			try:
+				return List(self.items[::other.value]).set_context(self.context), None
+			except:
+				return None, RTError(
+					other.pos_start, other.pos_end,
+					'Tuple Slicing failed',
+					self.context
+				)
+		else:
+			return None, Value.illegal_operation(self, other)
+
+	def get_comparison_eq(self, other):
+		if isinstance(other, Tuple):
+			if len(self.items) != len(other.items):
+				return Bool.false.set_context(self.context), None
+			for i in range(len(self.items)):
+				comparison_result, error = self.items[i].get_comparison_eq(other.items[i])
+				if error: return None, error
+				if not comparison_result.is_true():
+					return Bool.false.set_context(self.context), None
+			return Bool.true.set_context(self.context), None
+		else:
+			return Bool.false.set_context(self.context), None
+		
+	def get_comparison_ne(self, other):
+		comparison_result, error = self.get_comparison_eq(other)
+		if error: return None, error
+		return Bool(1 - comparison_result.value).set_context(self.context), None
+	
+	def copy(self):
+		copy = Tuple(self.items)
+		copy.set_pos(self.pos_start, self.pos_end)
+		copy.set_context(self.context)
+		return copy
+	
+	def is_true(self):
+		return len(self.items) > 0
+
+	def __str__(self):
+		return f'({", ".join([str(x) for x in self.items])})'
+
+	def __repr__(self):
+		return f'({", ".join([repr(x) for x in self.items])})'
+
 
 class BaseFunction(Value):
 	def __init__(self, name):
@@ -1495,6 +1597,19 @@ class Interpreter:
 			
 		return res.success(
 			List(elements).set_context(context).set_pos(node.pos_start, node.pos_end)
+		)
+	
+	def visit_TupleNode(self, node, context):
+		res = RTResult()
+		items = []
+
+		for item_node in node.item_nodes:
+			items.append(res.register(self.visit(item_node, context)))
+			if res.should_return():
+				return res
+		
+		return res.success(
+			Tuple(tuple(items)).set_context(context).set_pos(node.pos_start, node.pos_end)
 		)
 
 	def visit_VarAccessNode(self, node, context):

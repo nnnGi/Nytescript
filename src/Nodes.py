@@ -67,6 +67,22 @@ class ListNode(Node):
 		for node in self.element_nodes:
 			s += f'{node.to_string(indent + 1)}\n'
 		return s.rstrip()
+	
+class TupleNode(Node):
+	def __init__(self, item_nodes, pos_start, pos_end):
+		self.item_nodes = item_nodes
+
+		self.pos_start = pos_start
+		self.pos_end = pos_end
+	
+	def __repr__(self):
+		return f'({','.join(self.item_nodes.__repr__())})'
+	
+	def to_string(self, indent=0):
+		s = f'{"  " * indent}TupleNode:\n'
+		for node in self.item_nodes:
+			s += f'{node.to_string(indent + 1)}\n'
+		return s.rstrip()
 
 class VarAccessNode(Node):
 	def __init__(self, var_name_tok):

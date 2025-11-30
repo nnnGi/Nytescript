@@ -23,6 +23,9 @@ def isstr(obj: any) -> bool:
 def islist(obj: any) -> bool:
 	return isinstance(obj, list)
 
+def istuple(obj: any) -> bool:
+	return isinstance(obj, tuple)
+
 def isnone(obj: any) -> bool:
 	return obj is None
 

@@ -68,11 +68,19 @@ class Parser:
 		if self.tok_idx >= 0 and self.tok_idx < len(self.tokens):
 			self.current_tok = self.tokens[self.tok_idx]
 
+	def peek(self, offset):
+		peek_idx = self.tok_idx + offset
+		if peek_idx < len(self.tokens):
+			return self.tokens[peek_idx]
+
 	def parse(self):
 		res = self.statements()
 		
 		if self.fn == '<dev>':
-			print(f'\nAST {res.node.to_string()}\n')
+			if res.node != None:
+				print(f'\nAST {res.node.to_string()}\n')
+			else:
+				print(f'\nInvalid AST: {res.node}\n')
 
 		if (not res.error) and (self.current_tok.type != TT_EOF):
 			return res.failure(InvalidSyntaxError(
@@ -174,7 +182,7 @@ class Parser:
 			if res.error: return res
 			return res.success(include_node)
 
-		if self.current_tok.matches(TT_COMMENT, self.current_tok.value):
+		if self.current_tok.matches(TT_COMMENT, None):
 			res.register_advancement()
 			self.advance()
 			return res.success(PassNode(pos_start, self.current_tok.pos_start.copy()))
@@ -516,26 +524,31 @@ class Parser:
 
 			return res.success(TemplateStringNode(segments, pos_start, tok.pos_end))
 
-
 		elif tok.type == TT_IDENTIFIER:
 			res.register_advancement()
 			self.advance()
 			return res.success(VarAccessNode(tok))
 
 		elif tok.type == TT_LPAREN:
-			res.register_advancement()
-			self.advance()
-			expr = res.register(self.expr())
-			if res.error: return res
-			if self.current_tok.type == TT_RPAREN:
+			next_token = self.peek(2)
+			if next_token.matches(TT_COMMA, None):
+				tuple_expr = res.register(self.tuple_expr())
+				if res.error: return res
+				return res.success(tuple_expr)
+			else:
 				res.register_advancement()
 				self.advance()
-				return res.success(expr)
-			else:
-				return res.failure(InvalidSyntaxError(
-					self.current_tok.pos_start, self.current_tok.pos_end,
-					"Expected ')'"
-				))
+				expr = res.register(self.expr())
+				if res.error: return res
+				if self.current_tok.type == TT_RPAREN:
+					res.register_advancement()
+					self.advance()
+					return res.success(expr)
+				else:
+					return res.failure(InvalidSyntaxError(
+						self.current_tok.pos_start, self.current_tok.pos_end,
+						"Expected ')'"
+					))
 
 		elif tok.type == TT_LSQUARE:
 			list_expr = res.register(self.list_expr())
@@ -580,6 +593,55 @@ class Parser:
 		return res.failure(InvalidSyntaxError(
 			tok.pos_start, tok.pos_end,
 			f"Expected int, float, identifier, '+', '-', '(', '[', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}' or '{KEYWORDS[21]}'"
+		))
+	
+	def tuple_expr(self):
+		res = ParseResult()
+		item_nodes = []
+		pos_start = self.current_tok.pos_start.copy()
+		if self.current_tok.type != TT_LPAREN:
+			return res.failure(InvalidSyntaxError(
+				self.current_tok.pos_start, self.current_tok.pos_end,
+				f"Expected '('"
+			))
+		
+		res.register_advancement()
+		self.advance()
+
+		if self.current_tok.type == TT_RPAREN:
+			res.register_advancement()
+			self.advance()
+		else:
+			item_nodes.append(res.register(self.expr()))
+			if res.error:
+				return res.failure(InvalidSyntaxError(
+					self.current_tok.pos_start, self.current_tok.pos_end,
+					f"Expected ')', '{KEYWORDS[0]}', '{KEYWORDS[4]}', '{KEYWORDS[7]}', '{KEYWORDS[10]}', '{KEYWORDS[11]}', '{KEYWORDS[18]}', '{KEYWORDS[21]}', '{KEYWORDS[23]}', '{KEYWORDS[28]}', int, float, identifier, '+', '-', '(', '[' or '{KEYWORDS[3]}'"
+				))
+			
+			while self.current_tok.type == TT_COMMA:
+				res.register_advancement()
+				self.advance()
+
+				if self.current_tok.type == TT_RPAREN:
+					break
+
+				item_nodes.append(res.register(self.expr()))
+				if res.error: return res
+
+			if self.current_tok.type != TT_RPAREN:
+				return res.failure(InvalidSyntaxError(
+					self.current_tok.pos_start, self.current_tok.pos_end,
+					f"Expected ',' or ')'"
+				))
+
+			res.register_advancement()
+			self.advance()
+		
+		return res.success(TupleNode(
+			item_nodes,
+			pos_start,
+			self.current_tok.pos_end.copy()
 		))
 
 	def list_expr(self):

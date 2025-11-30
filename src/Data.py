@@ -14,9 +14,9 @@ from pprint import pp
 DIGITS = '0123456789'
 LETTERS = string.ascii_letters + '_'
 LETTERS_DIGITS = LETTERS + DIGITS
-VERSION = '0.8.7'
+VERSION = '0.8.8'
 FILE_EXTENSION = '.ns'
-MODE = 1
+MODE = 0
 LICENSE = """
 MIT License
 
@@ -92,6 +92,12 @@ def sort(lst, key=None, reverse=False):
 			   
 def count(lst, item):
 	return lst.count(item)
+			   
+def slice(lst, start, end=None, step=1):
+	if end != None:
+		return lst[start:end:step]
+	else:
+		return lst[start::step]
 			   
 info = "listutils: A simple list utility module."
 """),
