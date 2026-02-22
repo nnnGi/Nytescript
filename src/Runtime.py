@@ -328,19 +328,56 @@ class String(Value):
 			return None, Value.illegal_operation(self, other)
 
 	def powed_by(self, other):
-		if isinstance(other, Number):
-			if not isinstance(other.value, int) or other.value == 0:
+		if isinstance(other, Tuple):
+			if len(other.items) == 1:
+				if not isinstance(other.items[0].value, int):
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'String Indexing requires an Integer in a Tuple',
+						self.context
+					)
+				try:
+					return String(self.value[other.items[0].value]).set_context(self.context), None
+				except Exception as e:
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'String Indexing Failed',
+						self.context
+					)
+			elif len(other.items) == 2:
+				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)):
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'String Slicing requires 2 Integers in a Tuple',
+						self.context
+					)
+				try:
+					return String(self.value[other.items[0].value:other.items[1].value]).set_context(self.context), None
+				except Exception:
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'String Slicing Failed',
+						self.context
+					)
+			elif len(other.items) == 3:
+				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)) or (not isinstance(other.items[2].value, int)):
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'String Step Slicing requires 3 Integers in a Tuple',
+						self.context
+					)
+				try:
+					return String(self.value[other.items[0].value:other.items[1].value:other.items[2].value]).set_context(self.context), None
+				except Exception:
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'String Step Slicing Failed',
+						self.context
+					)
+			else:
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'String slicing step requires a non-zero integer',
-					self.context
-				)
-			try:
-				return String(self.value[::other.value]).set_context(self.context), None
-			except Exception:
-				return None, RTError(
-					other.pos_start, other.pos_end,
-					'String slicing with step failed',
+					'Invalid Slice Tuple',
 					self.context
 				)
 		else:
@@ -823,6 +860,8 @@ class BuiltInFunction(BaseFunction):
 			if hasattr(value, 'value') and isinstance(value.value, (list, tuple, str)):
 				elements = [elem if isinstance(elem, Value) else String(str(elem)) for elem in list(value.value)]
 				return RTResult().success(List(elements))
+			elif hasattr(value, 'items') and isinstance(value.items, tuple):
+				return RTResult().success(List(value.items))
 			elif isinstance(value, (list, tuple, str)):
 				elements = [elem if isinstance(elem, Value) else String(str(elem)) for elem in list(value)]
 				return RTResult().success(List(elements))
@@ -839,6 +878,33 @@ class BuiltInFunction(BaseFunction):
 				exec_ctx
 			))
 	execute_List.arg_names = ['value']
+
+	def execute_Tuple(self, exec_ctx):
+		value = exec_ctx.symbol_table.get('value')
+		if isinstance(value, Tuple):
+			return RTResult().success(value.copy())
+		try:
+			if hasattr(value, 'value') and isinstance(value.value, (list, tuple, str)):
+				items = (item if isinstance(item, Value) else String(str(item)) for item in tuple(value.value))
+				return RTResult().success(Tuple(items))
+			elif hasattr(value, 'elements') and isinstance(value.elements, list):
+				return RTResult().success(Tuple(value.elements))
+			elif isinstance(value, (list, tuple, str)):
+				items = [item if isinstance(item, Value) else String(str(item)) for item in tuple(value)]
+				return RTResult().success(Tuple(items))
+			else:
+				return RTResult().failure(RTError(
+					self.pos_start, self.pos_end,
+					f"Cannot convert type '{type(value).__name__}' to Tuple",
+					exec_ctx
+				))
+		except Exception as e:
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				f"Failed to convert value to Tuple: {e}",
+				exec_ctx
+			))
+	execute_Tuple.arg_names = ['value']
 
 	def execute_strcon(self, exec_ctx):
 		list_value = exec_ctx.symbol_table.get("list")
@@ -869,8 +935,12 @@ class BuiltInFunction(BaseFunction):
 				return RTResult().success(Bool.true)
 			return RTResult().success(Bool.false)
 
-		elif isinstance(iterable_value, List):
-			for element in iterable_value.elements:
+		elif isinstance(iterable_value, (List, Tuple)):
+			if isinstance(iterable_value, List):
+				iters = iterable_value.elements
+			else:
+				iters = iterable_value.items
+			for element in iters:
 				comparison_result, error = element.get_comparison_eq(item_value)
 				if error: return RTResult().failure(error)
 				if comparison_result.is_true():
@@ -898,6 +968,11 @@ class BuiltInFunction(BaseFunction):
 	def execute_is_list(self, exec_ctx):
 		is_list = isinstance(exec_ctx.symbol_table.get("value"), List)
 		return RTResult().success(Bool.true if is_list else Bool.false)
+	execute_is_list.arg_names = ["value"]
+
+	def execute_is_tuple(self, exec_ctx):
+		is_tuple = isinstance(exec_ctx.symbol_table.get("value"), Tuple)
+		return RTResult().success(Bool.true if is_tuple else Bool.false)
 	execute_is_list.arg_names = ["value"]
 
 	def execute_is_function(self, exec_ctx):
