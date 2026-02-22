@@ -53,19 +53,20 @@ SYMBOL_TABLE = [
 	'String',      # 11
 	'List',        # 12
 	'Bool',        # 13
-	'strcon',      # 14
-	'is_in',       # 15
-	'is_num',      # 16
-	'is_str',      # 17
-	'is_list',     # 18
-	'is_function', # 19
-	'sorted',      # 20
-	'append',      # 21
-	'pop',         # 22
-	'extend',      # 23
-	'len',         # 24
-	'run',         # 25
-	'exit',        # 26
+	'Tuple',       # 14
+	'strcon',      # 15
+	'is_in',       # 16
+	'is_num',      # 17
+	'is_str',      # 18
+	'is_list',     # 19
+	'is_function', # 20
+	'sorted',      # 21
+	'append',      # 22
+	'pop',         # 23
+	'extend',      # 24
+	'len',         # 25
+	'run',         # 26
+	'exit',        # 27
 ]
 
 class Token:

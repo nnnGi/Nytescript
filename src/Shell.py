@@ -3,7 +3,7 @@ Nytescript Shell and Interpreter, written by @0xnCubed in Python 3.12, 3.13 and 
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 
-© Copyright @0xnCubed 2025 - 2025
+© Copyright @0xnCubed 2025 - 2026
 '''
 
 import Data
