@@ -16,11 +16,11 @@ LETTERS = string.ascii_letters + '_'
 LETTERS_DIGITS = LETTERS + DIGITS
 VERSION = '0.8.8'
 FILE_EXTENSION = '.ns'
-MODE = 0
+MODE = 1
 LICENSE = """
 MIT License
 
-Copyright (c) 2025 0xnCubed and David Callanan
+Copyright (c) 2025-2026 0xnCubed and David Callanan
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
