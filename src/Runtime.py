@@ -474,21 +474,57 @@ class List(Value):
 		else:
 			return None, Value.illegal_operation(self, other)
 
-	#FIX THIS PLS
 	def powed_by(self, other):
-		if isinstance(other, Number):
-			if not isinstance(other.value, int) or other.value == 0:
+		if isinstance(other, Tuple):
+			if len(other.items) == 1:
+				if not isinstance(other.items[0].value, int):
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'List Indexing requires an Integer in a Tuple',
+						self.context
+					)
+				try:
+					return List(self.value[other.items[0].value]).set_context(self.context), None
+				except Exception as e:
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'List Indexing Failed',
+						self.context
+					)
+			elif len(other.items) == 2:
+				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)):
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'List Slicing requires 2 Integers in a Tuple',
+						self.context
+					)
+				try:
+					return List(self.value[other.items[0].value:other.items[1].value]).set_context(self.context), None
+				except Exception:
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'List Slicing Failed',
+						self.context
+					)
+			elif len(other.items) == 3:
+				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)) or (not isinstance(other.items[2].value, int)):
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'List Step Slicing requires 3 Integers in a Tuple',
+						self.context
+					)
+				try:
+					return List(self.value[other.items[0].value:other.items[1].value:other.items[2].value]).set_context(self.context), None
+				except Exception:
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'List Step Slicing Failed',
+						self.context
+					)
+			else:
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'List stepping requires a non-zero integer',
-					self.context
-				)
-			try:
-				return List(self.elements[::other.value]).set_context(self.context), None
-			except:
-				return None, RTError(
-					other.pos_start, other.pos_end,
-					'List stepping failed',
+					'Invalid Slice Tuple',
 					self.context
 				)
 		else:
@@ -574,21 +610,57 @@ class Tuple(Value):
 		else:
 			return None, Value.illegal_operation(self, other)
 		
-	#FIX THIS PLS
 	def powed_by(self, other):
-		if isinstance(other, Number):
-			if not isinstance(other.value, int) or other.value == 0:
+		if isinstance(other, Tuple):
+			if len(other.items) == 1:
+				if not isinstance(other.items[0].value, int):
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'Tuple Indexing requires an Integer in a Tuple',
+						self.context
+					)
+				try:
+					return Tuple(self.value[other.items[0].value]).set_context(self.context), None
+				except Exception as e:
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'Tuple Indexing Failed',
+						self.context
+					)
+			elif len(other.items) == 2:
+				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)):
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'Tuple Slicing requires 2 Integers in a Tuple',
+						self.context
+					)
+				try:
+					return Tuple(self.value[other.items[0].value:other.items[1].value]).set_context(self.context), None
+				except Exception:
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'Tuple Slicing Failed',
+						self.context
+					)
+			elif len(other.items) == 3:
+				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)) or (not isinstance(other.items[2].value, int)):
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'Tuple Step Slicing requires 3 Integers in a Tuple',
+						self.context
+					)
+				try:
+					return Tuple(self.value[other.items[0].value:other.items[1].value:other.items[2].value]).set_context(self.context), None
+				except Exception:
+					return None, RTError(
+						other.pos_start, other.pos_end,
+						'Tuple Step Slicing Failed',
+						self.context
+					)
+			else:
 				return None, RTError(
 					other.pos_start, other.pos_end,
-					'Tuple Slicing requires a non-zero integer',
-					self.context
-				)
-			try:
-				return List(self.items[::other.value]).set_context(self.context), None
-			except:
-				return None, RTError(
-					other.pos_start, other.pos_end,
-					'Tuple Slicing failed',
+					'Invalid Slice Tuple',
 					self.context
 				)
 		else:
