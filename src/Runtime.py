@@ -94,6 +94,7 @@ class Value:
 class NoneType(Value):
 	def __init__(self):
 		super().__init__()
+		self.value = None
 
 	def copy(self):
 		copy = NoneType()
@@ -108,6 +109,7 @@ class NoneType(Value):
 		return 'None'
 
 NoneType.none = NoneType()
+TypeNone = type(None)
 
 class Number(Value):
 	def __init__(self, value):
@@ -330,10 +332,10 @@ class String(Value):
 	def powed_by(self, other):
 		if isinstance(other, Tuple):
 			if len(other.items) == 1:
-				if not isinstance(other.items[0].value, int):
+				if not isinstance(other.items[0].value, (int, TypeNone)):
 					return None, RTError(
 						other.pos_start, other.pos_end,
-						'String Indexing requires an Integer in a Tuple',
+						'String Indexing requires an Integer or NoneType in a Tuple',
 						self.context
 					)
 				try:
@@ -345,10 +347,10 @@ class String(Value):
 						self.context
 					)
 			elif len(other.items) == 2:
-				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)):
+				if not (isinstance(other.items[0].value, (int, TypeNone)) or isinstance(other.items[1].value, (int, TypeNone))):
 					return None, RTError(
 						other.pos_start, other.pos_end,
-						'String Slicing requires 2 Integers in a Tuple',
+						'String Slicing requires 2 Integers or NoneType in a Tuple',
 						self.context
 					)
 				try:
@@ -360,10 +362,10 @@ class String(Value):
 						self.context
 					)
 			elif len(other.items) == 3:
-				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)) or (not isinstance(other.items[2].value, int)):
+				if not (isinstance(other.items[0].value, (int, TypeNone)) or isinstance(other.items[1].value, (int, TypeNone)) or isinstance(other.items[2].value, (int, TypeNone))):
 					return None, RTError(
 						other.pos_start, other.pos_end,
-						'String Step Slicing requires 3 Integers in a Tuple',
+						'String Step Slicing requires 3 Integers or NoneType in a Tuple',
 						self.context
 					)
 				try:
@@ -477,14 +479,14 @@ class List(Value):
 	def powed_by(self, other):
 		if isinstance(other, Tuple):
 			if len(other.items) == 1:
-				if not isinstance(other.items[0].value, int):
+				if not isinstance(other.items[0].value, (int, TypeNone)):
 					return None, RTError(
 						other.pos_start, other.pos_end,
 						'List Indexing requires an Integer in a Tuple',
 						self.context
 					)
 				try:
-					return List(self.value[other.items[0].value]).set_context(self.context), None
+					return List(self.elements[other.items[0].value]).set_context(self.context), None
 				except Exception as e:
 					return None, RTError(
 						other.pos_start, other.pos_end,
@@ -492,14 +494,14 @@ class List(Value):
 						self.context
 					)
 			elif len(other.items) == 2:
-				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)):
+				if not (isinstance(other.items[0].value, (int, TypeNone)) or isinstance(other.items[1].value, (int, TypeNone))):
 					return None, RTError(
 						other.pos_start, other.pos_end,
 						'List Slicing requires 2 Integers in a Tuple',
 						self.context
 					)
 				try:
-					return List(self.value[other.items[0].value:other.items[1].value]).set_context(self.context), None
+					return List(self.elements[other.items[0].value:other.items[1].value]).set_context(self.context), None
 				except Exception:
 					return None, RTError(
 						other.pos_start, other.pos_end,
@@ -507,14 +509,14 @@ class List(Value):
 						self.context
 					)
 			elif len(other.items) == 3:
-				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)) or (not isinstance(other.items[2].value, int)):
+				if not (isinstance(other.items[0].value, (int, TypeNone)) or isinstance(other.items[1].value, (int, TypeNone)) or isinstance(other.items[2].value, (int, TypeNone))):
 					return None, RTError(
 						other.pos_start, other.pos_end,
 						'List Step Slicing requires 3 Integers in a Tuple',
 						self.context
 					)
 				try:
-					return List(self.value[other.items[0].value:other.items[1].value:other.items[2].value]).set_context(self.context), None
+					return List(self.elements[other.items[0].value:other.items[1].value:other.items[2].value]).set_context(self.context), None
 				except Exception:
 					return None, RTError(
 						other.pos_start, other.pos_end,
@@ -613,14 +615,14 @@ class Tuple(Value):
 	def powed_by(self, other):
 		if isinstance(other, Tuple):
 			if len(other.items) == 1:
-				if not isinstance(other.items[0].value, int):
+				if not isinstance(other.items[0].value, (int, TypeNone)):
 					return None, RTError(
 						other.pos_start, other.pos_end,
 						'Tuple Indexing requires an Integer in a Tuple',
 						self.context
 					)
 				try:
-					return Tuple(self.value[other.items[0].value]).set_context(self.context), None
+					return Tuple(self.items[other.items[0].value]).set_context(self.context), None
 				except Exception as e:
 					return None, RTError(
 						other.pos_start, other.pos_end,
@@ -628,14 +630,14 @@ class Tuple(Value):
 						self.context
 					)
 			elif len(other.items) == 2:
-				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)):
+				if not (isinstance(other.items[0].value, (int, TypeNone)) or isinstance(other.items[1].value, (int, TypeNone))):
 					return None, RTError(
 						other.pos_start, other.pos_end,
 						'Tuple Slicing requires 2 Integers in a Tuple',
 						self.context
 					)
 				try:
-					return Tuple(self.value[other.items[0].value:other.items[1].value]).set_context(self.context), None
+					return Tuple(self.items[other.items[0].value:other.items[1].value]).set_context(self.context), None
 				except Exception:
 					return None, RTError(
 						other.pos_start, other.pos_end,
@@ -643,14 +645,14 @@ class Tuple(Value):
 						self.context
 					)
 			elif len(other.items) == 3:
-				if (not isinstance(other.items[0].value, int)) or (not isinstance(other.items[1].value, int)) or (not isinstance(other.items[2].value, int)):
+				if not (isinstance(other.items[0].value, (int, TypeNone)) or isinstance(other.items[1].value, (int, TypeNone)) or isinstance(other.items[2].value, (int, TypeNone))):
 					return None, RTError(
 						other.pos_start, other.pos_end,
 						'Tuple Step Slicing requires 3 Integers in a Tuple',
 						self.context
 					)
 				try:
-					return Tuple(self.value[other.items[0].value:other.items[1].value:other.items[2].value]).set_context(self.context), None
+					return Tuple(self.items[other.items[0].value:other.items[1].value:other.items[2].value]).set_context(self.context), None
 				except Exception:
 					return None, RTError(
 						other.pos_start, other.pos_end,
