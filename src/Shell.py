@@ -43,7 +43,9 @@ def shell() -> None:
 		except KeyboardInterrupt:
 			print("^C")
 			continue
-		except:
+		except Exception as e:
+			if Data.MODE == 0:
+				print(f'A Shell Error Occured: {e}')
 			continue
 
 		if text.strip() == "": continue
