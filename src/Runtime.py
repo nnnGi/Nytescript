@@ -3,7 +3,7 @@ from Parser import Parser, RTResult
 from Lexer import Lexer, Token, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
 from Instance import *
-from Data import FILE_EXTENSION, STDLIB, os, sys, importlib
+from Data import FILE_EXTENSION, STDLIB, os, sys, importlib, lru_cache
 
 #######################################
 # VALUES
@@ -700,7 +700,6 @@ class Tuple(Value):
 
 	def __repr__(self):
 		return f'({", ".join([repr(x) for x in self.items])})'
-
 
 class BaseFunction(Value):
 	def __init__(self, name):
@@ -2362,6 +2361,7 @@ def symbols():
 
 	imported_modules = {}
 
+@lru_cache
 def run(fn, text, context=None, new_context=False):
 
 	# Generate Tokens
