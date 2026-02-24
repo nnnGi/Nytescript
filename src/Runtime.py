@@ -259,9 +259,9 @@ Number.null = Number(0)
 class Bool(Number):
 	def __init__(self, value):
 		super().__init__(value)
-		if self.value in [0, 1]:
+		if self.value in (0, 1):
 			self.value = value
-		elif self.value in [True, False]:
+		elif self.value in (True, False):
 			self.value = 1 if value else 0
 		else:
 			self.value = 0
@@ -1250,16 +1250,7 @@ class BuiltInMethod(BaseFunction):
 
 		py_args = []
 		for arg in args:
-			if isinstance(arg, Number):
-				py_args.append(arg.value)
-			elif isinstance(arg, String):
-				py_args.append(arg.value)
-			elif isinstance(arg, List):
-				py_args.append([elem.value for elem in arg.elements])
-			elif isinstance(arg, NoneType):
-				py_args.append(None)
-			else:
-				py_args.append(arg)
+			py_args.append(self.unwrap_value(arg))
 
 		try:
 			return_value = self.py_func(*py_args)
@@ -1270,21 +1261,45 @@ class BuiltInMethod(BaseFunction):
 				exec_ctx, error_title="Standard Library Error"
 			))
 
-		wrapped_value = None
-		if isnum(return_value):
-			wrapped_value = Number(return_value)
-		elif isstr(return_value):
-			wrapped_value = String(return_value)
-		elif isbool(return_value):
-			wrapped_value = Bool.true if return_value else Bool.false
-		elif islist(return_value):
-			wrapped_value = List([Number(item) if isinstance(item, (int, float)) else String(str(item)) for item in return_value])
-		elif isnone(return_value):
-			wrapped_value = NoneType.none
-		else:
-			wrapped_value = String(str(return_value))
+		wrapped_value = self.wrap_value(return_value)
 
 		return res.success(wrapped_value.set_context(exec_ctx).set_pos(self.pos_start, self.pos_end))
+	
+	def unwrap_value(self, value):
+		if isinstance(value, (Number, String, Bool, NoneType)):
+			unwrapped_value = value.value
+		elif isinstance(value, List):
+			unwrapped_value = [self.unwrap_value(x) for x in value.elements]
+		elif isinstance(value, Tuple):
+			unwrapped_value = [self.unwrap_value(x) for x in value.items]
+		else:
+			unwrapped_value = value
+
+		return unwrapped_value
+
+	def wrap_value(self, value):
+		if isnum(value):
+			wrapped_value = Number(value)
+		elif isstr(value):
+			wrapped_value = String(value)
+		elif isbool(value):
+			wrapped_value = Bool(value)
+		elif istuple(value):
+			wrapped_value = Tuple([self.wrap_value(x) for x in value])
+		elif islist(value):
+			wrapped_value = List([self.wrap_value(x) for x in value])
+		if isclass(value):
+			wrapped_value = PyClass(value)
+		if ismethod(value):
+			wrapped_value = BuiltInMethod(value.__name__, value)
+		if isobject(value):
+			wrapped_value = PyObject(value)
+		elif isnone(value):
+			wrapped_value = NoneType.none
+		else:
+			wrapped_value = String(str(value))
+		
+		return wrapped_value
 
 	def copy(self):
 		copy = BuiltInMethod(self.name, self.py_func)
@@ -1319,9 +1334,11 @@ class PyObject(Value):
 		if isstr(py_value):
 			return String(py_value)
 		if islist(py_value):
-			return List([self.wrap_py_value(e) for e in py_value])
+			return List([self.wrap_py_value(x) for x in py_value])
 		if isbool(py_value):
 			return Bool(py_value)
+		if istuple(py_value):
+			return Tuple([self.wrap_py_value(x) for x in py_value])
 		if isclass(py_value):
 			return PyClass(py_value)
 		if ismethod(py_value):
@@ -1445,37 +1462,66 @@ class PyModule(Value):
 				def __init__(self, name, py_func):
 					super().__init__(name)
 					self.py_func = py_func
-				
+
+				def wrap_value(self, value):
+					if isnum(value):
+						wrapped_value = Number(value)
+					elif isstr(value):
+						wrapped_value = String(value)
+					elif isbool(value):
+						wrapped_value = Bool(value)
+					elif istuple(value):
+						wrapped_value = Tuple([self.wrap_value(x) for x in value])
+					elif islist(value):
+						wrapped_value = List([self.wrap_value(x) for x in value])
+					if isclass(value):
+						wrapped_value = PyClass(value)
+					if ismethod(value):
+						wrapped_value = BuiltInMethod(value.__name__, value)
+					if isobject(value):
+						wrapped_value = PyObject(value)
+					elif isnone(value):
+						wrapped_value = NoneType.none
+					else:
+						wrapped_value = String(str(value))
+		
+					return wrapped_value
+
 				def execute(self, args):
 					py_args = [arg.value for arg in args]
 					try:
 						py_result = self.py_func(*py_args)
-						if isnum(py_result):
-							return res.success(Number(py_result).set_context(self.context))
-						elif isstr(py_result):
-							return res.success(String(py_result).set_context(self.context))
-						elif islist(py_result):
-							elements = [Number(x) if isnum(x) else List(x) if islist(x) else String(str(x)) for x in py_result]
-							return res.success(List(elements).set_context(self.context))
-						elif isnone(py_result):
-							return res.success(NoneType.none)
+						return res.success(self.wrap_value(py_result).set_context(self.context))
 					except Exception as e:
 						return res.failure(RTError(self.pos_start, self.pos_end, f"Error in imported function '{self.name}': {e}", self.context))
 
 			return PyMethodWrapper(name, attr).set_context(self.context).set_pos(self.pos_start, self.pos_end), None
 
-		elif isnum(attr):
-			return Number(attr).set_context(self.context), None
-		elif isstr(attr):
-			return String(attr).set_context(self.context), None
-		elif islist(attr):
-			elements = [Number(x) if isnum(x) else List(x) if islist(x) else String(str(x)) for x in attr]
-			return List(elements).set_context(self.context), None
-		elif isbool(attr):
-			return Bool(attr).set_context(self.context), None
+		return self.wrap_value(attr).set_context(self.context), None
+	
+	def wrap_value(self, value):
+		if isnum(value):
+			wrapped_value = Number(value)
+		elif isstr(value):
+			wrapped_value = String(value)
+		elif isbool(value):
+			wrapped_value = Bool(value)
+		elif istuple(value):
+			wrapped_value = Tuple([self.wrap_value(x) for x in value])
+		elif islist(value):
+			wrapped_value = List([self.wrap_value(x) for x in value])
+		if isclass(value):
+			wrapped_value = PyClass(value)
+		if ismethod(value):
+			wrapped_value = BuiltInMethod(value.__name__, value)
+		if isobject(value):
+			wrapped_value = PyObject(value)
+		elif isnone(value):
+			wrapped_value = NoneType.none
+		else:
+			wrapped_value = String(str(value))
 		
-		# Fallback for unhandled types
-		return NoneType.none, None
+		return wrapped_value
 
 	def __repr__(self):
 		return f"<PyModule {self.name}>"
