@@ -45,7 +45,7 @@ def shell() -> None:
 			continue
 		except Exception as e:
 			if Data.MODE == 0:
-				print(f'A Shell Error Occured: {e}')
+				print(f'[SHELL ERROR]: {e}')
 			continue
 
 		if text.strip() == "": continue
