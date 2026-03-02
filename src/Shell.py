@@ -66,7 +66,9 @@ def shell() -> None:
 				if repr(result.elements[0]) != 'None':
 					print(repr(result.elements[0]))
 			else:
-				print(repr(result))
+				for i in result.elements:
+					if repr(i) != 'None':
+						print(repr(i))
 
 @cache
 def intepreter(fn) -> None:
