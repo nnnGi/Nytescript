@@ -6,5 +6,4 @@
 - Added `platform` to STDLIB 
 
 # 🐞 Bug Fixes:
-
-Nothing for 0.8.8
+- Fixed Recursive Module Import Value Wrapping (Fixed to Linear vs Recursive)
