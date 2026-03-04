@@ -3,7 +3,7 @@
 #######################################
 
 import string
-import os, sys
+import os, sys, platform
 import importlib
 from pprint import pp
 from functools import lru_cache
@@ -48,13 +48,14 @@ SOFTWARE.
 
 STDLIB = {
     # Type 1: Inbuilt Python Modules
-    "math":   ("module", "math"),
-    "random": ("module", "random"),
-	"time":   ("module", "time"),
-	"os":     ("module", "os"),
-	"sys":    ("module", "sys"),
-	"json":   ("module", "json"),
-	"re":     ("module", "re"),
+    "math":     ("module", "math"),
+    "random":   ("module", "random"),
+	"time":     ("module", "time"),
+	"os":       ("module", "os"),
+	"sys":      ("module", "sys"),
+	"json":     ("module", "json"),
+	"re":       ("module", "re"),
+	"platform": ("module", "platform"),
 
     # Type 2: Coded Python Modules
     "strutils": ("code", """

@@ -8,13 +8,12 @@ It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by
 
 import Data
 import Runtime
-import os, sys, platform
 from functools import cache
 
-if sys.platform != 'win32':
+if Data.sys.platform != 'win32':
 	try:
 		import readline
-		history_file = os.path.join(os.path.expanduser('~'), '.nytescript_history')
+		history_file = Data.os.path.join(Data.os.path.expanduser('~'), '.nytescript_history')
 		try:
 			readline.read_history_file(history_file)
 		except FileNotFoundError:
@@ -30,8 +29,8 @@ if sys.platform != 'win32':
 
 @cache
 def shell() -> None:
-	INTEPRETER_LANG = sys.version.split(' [')[0]
-	BOOT_INFO = f'Nytescript {Data.VERSION} [Python {INTEPRETER_LANG}] on {platform.system() if platform.system() != "Darwin" else "Darwin (MacOS)"}\nType "license" or "help" for more information and "exit" to quit'
+	INTEPRETER_LANG = Data.sys.version.split(' [')[0]
+	BOOT_INFO = f'Nytescript {Data.VERSION} [Python {INTEPRETER_LANG}] on {Data.platform.system() if Data.platform.system() != "Darwin" else "Darwin (MacOS)"}\nType "license" or "help" for more information and "exit" to quit'
 
 	print(BOOT_INFO)
 	while True:
@@ -87,11 +86,11 @@ def intepreter(fn) -> None:
 		print(f"Failed to load script \"{fn}\": {e}")	
 
 def cli() -> None:
-	if len(sys.argv) == 1:
+	if len(Data.sys.argv) == 1:
 		shell()
-	elif len(sys.argv) >= 2:
-		if sys.argv[1] != ('--version' or '-v'):
-			intepreter(' '.join(sys.argv[1:]))
+	elif len(Data.sys.argv) >= 2:
+		if Data.sys.argv[1] != ('--version' or '-v'):
+			intepreter(' '.join(Data.sys.argv[1:]))
 		else:
 			print(f'Nytescript {Data.VERSION}')
 		
