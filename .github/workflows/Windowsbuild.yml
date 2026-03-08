@@ -31,8 +31,9 @@ jobs:
           script-name: src/Shell.py
           mode: onefile
           output-file: nytescript.exe
+          follow-imports: true
             
-      - name: ⬆️ Upload Windows Artifact
+      - name: ⬆️ Upload Windows Artefact
         uses: actions/upload-artifact@v4
         with:
           name: nytescript-windows-exe
