@@ -29,7 +29,7 @@ jobs:
         uses: Nuitka/Nuitka-Action@main
         with:
           script-name: src/Shell.py
-          mode: onefile
+          mode: app
           output-file: nytescript.exe
           follow-imports: true
             
@@ -39,3 +39,4 @@ jobs:
           name: nytescript-windows-exe
           # Nuitka-Action places the executable in the 'build' folder
           path: dist/nytescript.exe
+          include-hidden-files: true
