@@ -128,4 +128,12 @@ def remove(filename):
 	os.remove(filename)			
 info = "fileio: A simple file I/O module using Object-Oriented Programming."
 """),
+	"py": ("code", """
+def exect(codesnippet):
+	return exec(codesnippet)
+info = "py: A minimal module to run arbitrary Python Code using the exect() function."
+"""),
+	"typelib": ("code", """
+info = "typelib: A simple module to do type checking and advanced manipulation."
+"""),
 }
