@@ -134,6 +134,7 @@ def exect(codesnippet):
 info = "py: A minimal module to run arbitrary Python Code using the exect() function."
 """),
 	"typelib": ("code", """
+# To be though through
 info = "typelib: A simple module to do type checking and advanced manipulation."
 """),
 }
