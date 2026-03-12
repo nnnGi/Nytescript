@@ -129,12 +129,91 @@ def remove(filename):
 info = "fileio: A simple file I/O module using Object-Oriented Programming."
 """),
 	"py": ("code", """
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
 def exect(codesnippet):
 	return exec(codesnippet)
-info = "py: A minimal module to run arbitrary Python Code using the exect() function."
+
+def create_window(title="EasyTk Window", size="800x600", resizable=(True, True)):
+    \"\"\"
+    Initializes the main application window.
+    Returns: The root window object.
+    \"\"\"
+    root = tk.Tk()
+    root.title(title)
+    root.geometry(size)
+    root.resizable(resizable[0], resizable[1])
+    return root
+
+def create_container(parent, side="top", fill="both", expand=True, padding=10, horizontal=False):
+    \"\"\"
+    Creates a Frame (container) to organize other widgets.
+    \"\"\"
+    frame = ttk.Frame(parent, padding=padding)
+    frame.pack(side=side, fill=fill, expand=expand)
+    return frame
+
+def add_label(parent, text, font=("Arial", 12), color=None, pady=5):
+    \"\"\"
+    Adds a text label to the parent container.
+    "\"\"\""
+    label = ttk.Label(parent, text=text, font=font)
+    if color:
+        label.configure(foreground=color)
+    label.pack(pady=pady)
+    return label
+
+def add_button(parent, text, command, style=None, pady=5):
+    \"\"\"
+    Adds a clickable button.
+    \"\"\"
+    button = ttk.Button(parent, text=text, command=command)
+    button.pack(pady=pady)
+    return button
+
+def add_input(parent, default_text="", width=30, pady=5, password=False):
+    \"\"\"
+    Adds a text entry field. 
+    Returns: The Entry widget (use .get() to retrieve text).
+    "\"\"\""
+    show = "*" if password else ""
+    entry = ttk.Entry(parent, width=width, show=show)
+    entry.insert(0, default_text)
+    entry.pack(pady=pady)
+    return entry
+
+def add_checkbox(parent, text):
+    \"\"\"
+    Adds a checkbox.
+    Returns: (The BooleanVar tracking state, The Checkbutton widget).
+    "\"\"\""
+    var = tk.BooleanVar()
+    cb = ttk.Checkbutton(parent, text=text, variable=var)
+    cb.pack(pady=5)
+    return var, cb
+
+def show_message(title, message, type="info"):
+    \"\"\"
+    Wrapper for standard dialog boxes.
+    Types: info, warning, error
+    \"\"\"
+    if type == "info":
+        messagebox.showinfo(title, message)
+    elif type == "warning":
+        messagebox.showwarning(title, message)
+    elif type == "error":
+        messagebox.showerror(title, message)
+
+def run_app(root):
+    \"\"\"
+    Starts the Tkinter main loop.
+    \"\"\"
+    root.mainloop()		
+
+info = "py: A minimal module to run Python Code through functions."
 """),
 	"typelib": ("code", """
-# To be though through
+# To be thought through
 info = "typelib: A simple module to do type checking and advanced manipulation."
 """),
 }
