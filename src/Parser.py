@@ -1232,7 +1232,6 @@ class Parser:
 
 	def try_except_expr(self):
 		res = ParseResult()
-		pos_start = self.current_tok.pos_start.copy()
 
 		if not self.current_tok.matches(TT_KEYWORD, KEYWORDS[21]):
 			return res.failure(InvalidSyntaxError(
@@ -1261,7 +1260,6 @@ class Parser:
 				try_body = res.register(self.statement())
 				if res.error: return res
 
-			# Expect 'except' keyword
 			if not self.current_tok.matches(TT_KEYWORD, KEYWORDS[22]):
 				return res.failure(InvalidSyntaxError(
 					self.current_tok.pos_start, self.current_tok.pos_end,

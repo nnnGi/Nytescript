@@ -1824,6 +1824,29 @@ class Interpreter:
 
 	def no_visit_method(self, node, context):
 		raise Exception(f'No visit_{type(node).__name__} method defined')
+	
+	def unwrap(self, wrapped_value):
+		if isnum(wrapped_value):
+			value = Number(wrapped_value)
+		elif isstr(wrapped_value):
+			value = String(wrapped_value)
+		elif isbool(wrapped_value):
+			value = Bool(wrapped_value)
+		elif islist(wrapped_value):
+			value = List(self.unwrap(x) for x in wrapped_value)
+		elif istuple(wrapped_value):
+			value = Tuple(self.unwrap(x) for x in wrapped_value)
+		elif isclass(wrapped_value):
+			value = PyClass(wrapped_value)
+		elif ismethod(wrapped_value):
+			value = BuiltInMethod(wrapped_value)
+		elif isnone(wrapped_value):
+			value = NoneType().none
+		else:
+			value = PyObject(wrapped_value)
+		
+		return value
+		
 
 	###################################
 
@@ -2137,8 +2160,7 @@ class Interpreter:
 
 			final_value_from_call = res.register(return_rt_result)
 			
-			if res.should_return(): 
-				return res 
+			if res.should_return(): return res 
 			
 			if isinstance(final_value_from_call, Value):
 				if was_class_call:
@@ -2251,22 +2273,7 @@ class Interpreter:
 			for name, item in module_scope.items():
 				if name.startswith("__"):
 					continue
-				elif isclass(item):
-					module_symbol_table.set(name, PyClass(item))
-				elif ismethod(item):
-					module_symbol_table.set(name, BuiltInMethod(name, item))
-				elif isbool(item):
-					module_symbol_table.set(name, Bool(item))
-				elif isnum(item):
-					module_symbol_table.set(name, Number(item))
-				elif isstr(item):
-					module_symbol_table.set(name, String(item))
-				elif islist(item):
-					module_symbol_table.set(name, List([Number(x) if isnum(x) else List(x) if islist(x) else String(str(x)) for x in item]))
-				elif isnone(item):
-					module_symbol_table.set(name, NoneType.none)
-				else:
-					module_symbol_table.set(name, PyObject(item))
+				module_symbol_table.set(name, self.unwrap(item))
 					
 			module_value = ModuleValue(module_name, module_symbol_table).set_context(context).set_pos(node.pos_start, node.pos_end)
 			context.symbol_table.set(module_name, module_value)
@@ -2340,26 +2347,10 @@ class Interpreter:
 				if name.startswith("__"):
 					continue
 				
-				wrapped_value = None
-				if isclass(item):
-					wrapped_value = PyClass(item)
-				elif ismethod(item):
-					wrapped_value = BuiltInMethod(name, item)
-				elif isbool(item):
-					wrapped_value = Bool(item)
-				elif isnum(item):
-					wrapped_value = Number(item)
-				elif isstr(item):
-					wrapped_value = String(item)
-				elif islist(item):
-					wrapped_value = List([Number(x) if isnum(x) else List(x) if islist(x) else String(str(x)) for x in item])
-				elif isnone(item):
-					wrapped_value = NoneType.none
-				else:
-					wrapped_value = PyObject(item)
+				unwrapped_value = self.unwrap(item)
 					
-				if wrapped_value:
-					context.symbol_table.set(name, wrapped_value.set_context(context).set_pos(node.pos_start, node.pos_end))
+				if unwrapped_value:
+					context.symbol_table.set(name, unwrapped_value.set_context(context).set_pos(node.pos_start, node.pos_end))
 				
 			return res.success(NoneType.none) 
 
