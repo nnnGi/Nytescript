@@ -347,10 +347,10 @@ class Parser:
 
 	def call(self):
 		res = ParseResult()
-		atom = res.register(self.member_access())
+		node = res.register(self.member_access())
 		if res.error: return res
 
-		if self.current_tok.type == TT_LPAREN:
+		while self.current_tok.type == TT_LPAREN:
 			res.register_advancement()
 			self.advance()
 			arg_nodes = []
@@ -378,11 +378,28 @@ class Parser:
 						self.current_tok.pos_start, self.current_tok.pos_end,
 						f"Expected ',' or ')'"
 					))
-
+				
 				res.register_advancement()
 				self.advance()
-			return res.success(CallNode(atom, arg_nodes))
-		return res.success(atom)
+			node = CallNode(node, arg_nodes)
+
+			while self.current_tok.type == TT_DOT:
+				res.register_advancement()
+				self.advance()
+
+				if self.current_tok.type != TT_IDENTIFIER:
+					return res.failure(InvalidSyntaxError(
+						self.current_tok.pos_start, self.current_tok.pos_end,
+						"Expected identifier after '.'"
+					))
+
+				member_name_tok = self.current_tok
+				res.register_advancement()
+				self.advance()
+
+				node = MemberAccessNode(node, member_name_tok)
+
+		return res.success(node)
 
 	def class_def(self):
 		res = ParseResult()
@@ -465,6 +482,7 @@ class Parser:
 			self.advance()
 
 			node = MemberAccessNode(node, member_name_tok)
+			
 
 		return res.success(node)
 
