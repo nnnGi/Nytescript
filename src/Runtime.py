@@ -1825,7 +1825,7 @@ class Interpreter:
 	def no_visit_method(self, node, context):
 		raise Exception(f'No visit_{type(node).__name__} method defined')
 	
-	def unwrap(self, wrapped_value):
+	def unwrap(self, name, wrapped_value):
 		if isnum(wrapped_value):
 			value = Number(wrapped_value)
 		elif isstr(wrapped_value):
@@ -1833,13 +1833,13 @@ class Interpreter:
 		elif isbool(wrapped_value):
 			value = Bool(wrapped_value)
 		elif islist(wrapped_value):
-			value = List(self.unwrap(x) for x in wrapped_value)
+			value = List(self.unwrap(name, x) for x in wrapped_value)
 		elif istuple(wrapped_value):
-			value = Tuple(self.unwrap(x) for x in wrapped_value)
+			value = Tuple(self.unwrap(name, x) for x in wrapped_value)
 		elif isclass(wrapped_value):
 			value = PyClass(wrapped_value)
 		elif ismethod(wrapped_value):
-			value = BuiltInMethod(wrapped_value)
+			value = BuiltInMethod(name, wrapped_value)
 		elif isnone(wrapped_value):
 			value = NoneType().none
 		else:
@@ -2145,7 +2145,6 @@ class Interpreter:
 			
 			was_class_call = isinstance(value_to_call, NytescriptClass)
 
-			
 			for arg_node in node.arg_nodes:
 				args.append(res.register(self.visit(arg_node, context)))
 				if res.should_return(): return res
@@ -2273,7 +2272,7 @@ class Interpreter:
 			for name, item in module_scope.items():
 				if name.startswith("__"):
 					continue
-				module_symbol_table.set(name, self.unwrap(item))
+				module_symbol_table.set(name, self.unwrap(name, item))
 					
 			module_value = ModuleValue(module_name, module_symbol_table).set_context(context).set_pos(node.pos_start, node.pos_end)
 			context.symbol_table.set(module_name, module_value)
@@ -2347,7 +2346,7 @@ class Interpreter:
 				if name.startswith("__"):
 					continue
 				
-				unwrapped_value = self.unwrap(item)
+				unwrapped_value = self.unwrap(name, item)
 					
 				if unwrapped_value:
 					context.symbol_table.set(name, unwrapped_value.set_context(context).set_pos(node.pos_start, node.pos_end))
