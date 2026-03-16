@@ -3,7 +3,7 @@ from Parser import Parser, RTResult
 from Lexer import Lexer, Token, KEYWORDS, SYMBOL_TABLE
 from Tokens import *
 from Instance import *
-from Data import FILE_EXTENSION, MODE, STDLIB, os, sys, importlib, lru_cache
+from Data import FILE_EXTENSION, MODE, STDLIB, os, sys, importlib, subprocess, lru_cache
 
 #######################################
 # VALUES
@@ -866,7 +866,8 @@ class BuiltInFunction(BaseFunction):
 	execute_input_int.arg_names = []
 
 	def execute_clear(self, exec_ctx):
-		os.system('cls' if os.name == 'nt' else 'clear')
+		print("\033[H\033[J", end="")
+		# subprocess.call('cls' if os.name == 'nt' else'clear', shell=True)
 		return RTResult().success(NoneType.none)
 	execute_clear.arg_names = []
 
