@@ -1,9 +1,9 @@
-from Errors import RTError, RecursiveError, KeyboardInterrupted
+from Errors import RTError, RecursiveError
 from Parser import Parser, RTResult
-from Lexer import Lexer, Token, KEYWORDS, SYMBOL_TABLE
+from Lexer import Lexer, Token, KEYWORDS
 from Tokens import *
 from Instance import *
-from Data import FILE_EXTENSION, MODE, STDLIB, os, sys, importlib, subprocess, lru_cache
+from Data import FILE_EXTENSION, MODE, STDLIB, SYMBOL_TABLE, sys, importlib, lru_cache
 
 #######################################
 # VALUES
@@ -1038,6 +1038,11 @@ class BuiltInFunction(BaseFunction):
 		is_string = isinstance(exec_ctx.symbol_table.get("value"), String)
 		return RTResult().success(Bool.true if is_string else Bool.false)
 	execute_is_string.arg_names = ["value"]
+
+	def execute_is_bool(self, exec_ctx):
+		is_bool = isinstance(exec_ctx.symbol_table.get("value"), Bool)
+		return RTResult().success(Bool.true if is_bool else Bool.false)
+	execute_is_bool.arg_names = ["value"]
 
 	def execute_is_list(self, exec_ctx):
 		is_list = isinstance(exec_ctx.symbol_table.get("value"), List)
@@ -2479,17 +2484,17 @@ def symbols():
 @lru_cache
 def run(fn, text, context=None, new_context=False):
 
-	# Generate Tokens
+	# Generate Tokens (Lexer)
 	lexer = Lexer(fn, text)
 	tokens, error = lexer.tokeniser()
 	if error: return None, error
 
-	# Generate AST
+	# Generate AST (Parser)
 	parser = Parser(fn, tokens)
 	ast = parser.parse()
 	if ast.error: return None, ast.error
 
-	# Run Nytescript
+	# Run Nytescript (Interpreter)
 	interpreter = Interpreter()
 	if context is None:
 		context = Context('<program>')

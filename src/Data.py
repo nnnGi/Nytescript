@@ -17,7 +17,7 @@ LETTERS = string.ascii_letters + '_'
 LETTERS_DIGITS = LETTERS + DIGITS
 VERSION = '0.8.8'
 FILE_EXTENSION = '.ns'
-MODE = 1
+MODE = 0
 LICENSE = """
 MIT License
 
@@ -41,6 +41,38 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
+SYMBOL_TABLE = [
+	'Null',        # 0 Null Value or (0)
+	'False',       # 1 False Value or (0)
+	'True',        # 2 True Value or (1)
+	'None',        # 3 None Value or (NoneType)
+	'print',       # 4
+	'print_ret',   # 5
+	'input',       # 6 
+	'input_int',   # 7 
+	'input_char',  # 8 
+	'clear',       # 9
+	'Number',      # 10
+	'String',      # 11
+	'List',        # 12
+	'Bool',        # 13
+	'Tuple',       # 14
+	'strcon',      # 15
+	'is_in',       # 16
+	'is_num',      # 17
+	'is_bool',     # 18
+	'is_str',      # 19
+	'is_list',     # 20
+	'is_function', # 21
+	'sorted',      # 22
+	'append',      # 23
+	'pop',         # 24
+	'extend',      # 25
+	'len',         # 26
+	'run',         # 27
+	'exit',        # 28
+]
 
 #######################################
 # STDLIB

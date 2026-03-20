@@ -38,36 +38,6 @@ KEYWORDS = [
 	'include',  # 28 Include Statement
 ]
 
-SYMBOL_TABLE = [
-	'Null',        # 0 Null Value or (0)
-	'False',       # 1 False Value or (0)
-	'True',        # 2 True Value or (1)
-	'None',        # 3 None Value or (NoneType)
-	'print',       # 4
-	'print_ret',   # 5
-	'input',       # 6 
-	'input_int',   # 7 
-	'input_char',  # 8 
-	'clear',       # 9
-	'Number',      # 10
-	'String',      # 11
-	'List',        # 12
-	'Bool',        # 13
-	'Tuple',       # 14
-	'strcon',      # 15
-	'is_in',       # 16
-	'is_num',      # 17
-	'is_str',      # 18
-	'is_list',     # 19
-	'is_function', # 20
-	'sorted',      # 21
-	'append',      # 22
-	'pop',         # 23
-	'extend',      # 24
-	'len',         # 25
-	'run',         # 26
-	'exit',        # 27
-]
 
 class Token:
 	def __init__(self, type_, value=None, pos_start=None, pos_end=None):
