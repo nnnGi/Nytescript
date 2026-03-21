@@ -6,6 +6,9 @@
 - Allow Recursive Dot Notation `sys.stdin.read()` without needing parentheses for Ordering `(sys.stdin).read()`
 - Added `platform` to STDLIB
 - Added `py` module to STDLIB with an `exect()` to run any python code
+- Added `exec` function to run NS code in a string
+- Rewrote Shell
+- Any Non-zero value to the `Bool()` constuctor will always result in True (like python)
 
 # 🐞 Bug Fixes:
 - Fixed Recursive Module Import Value Wrapping (Fixed to Linear vs Recursive)
