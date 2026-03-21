@@ -6,7 +6,7 @@ import string
 import os, sys, platform
 import importlib
 from pprint import pp
-from functools import lru_cache
+from functools import lru_cache, cache
 
 #######################################
 # CONSTANTS
@@ -17,7 +17,7 @@ LETTERS = string.ascii_letters + '_'
 LETTERS_DIGITS = LETTERS + DIGITS
 VERSION = '0.8.8'
 FILE_EXTENSION = '.ns'
-MODE = 0
+MODE = 1
 LICENSE = """
 MIT License
 
@@ -65,13 +65,14 @@ SYMBOL_TABLE = [
 	'is_str',      # 19
 	'is_list',     # 20
 	'is_function', # 21
-	'sorted',      # 22
-	'append',      # 23
-	'pop',         # 24
-	'extend',      # 25
-	'len',         # 26
-	'run',         # 27
-	'exit',        # 28
+	'exec',        # 22
+	'sorted',      # 23
+	'append',      # 24
+	'pop',         # 25
+	'extend',      # 26
+	'len',         # 27
+	'run',         # 28
+	'exit',        # 29
 ]
 
 #######################################

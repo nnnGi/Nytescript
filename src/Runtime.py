@@ -264,7 +264,7 @@ class Bool(Number):
 		elif self.value in (True, False):
 			self.value = 1 if value else 0
 		else:
-			self.value = 0
+			self.value = 1
 	
 	def copy(self):
 		copy = Bool(self.value)
@@ -886,15 +886,21 @@ class BuiltInFunction(BaseFunction):
 	def execute_Number(self, exec_ctx):
 		data_value = exec_ctx.symbol_table.get('value')
 		try:
-			value_str = str(data_value)
-			if '.' in value_str:
-				result = float(value_str)
+			if isinstance(data_value, (List, Tuple)):
+				str_value = str(data_value)
+				if '.' in str_value:
+					result = float(str_value)
+				else:
+					result = int(str_value)
 			else:
-				result = int(value_str)
-		except (ValueError, TypeError) as e:
+				if int(float(data_value.value)) == int(data_value.value):
+					result = int(data_value.value)
+				else:
+					result = float(data_value.value)
+		except (ValueError, TypeError, AttributeError) as e:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				f"Cannot convert value to Number: {e}",
+				f"Failed to convert value to Number: {e}",
 				exec_ctx
 			))
 		return RTResult().success(Number(result))
@@ -904,10 +910,10 @@ class BuiltInFunction(BaseFunction):
 		data_value = exec_ctx.symbol_table.get('value')
 		try:
 			result = int(data_value.value)
-		except (ValueError, TypeError) as e:
+		except (ValueError, TypeError, AttributeError) as e:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				f"Cannot convert value to Boolean: {e}",
+				f"Failed to convert value to Boolean: {e}",
 				exec_ctx
 			))
 		return RTResult().success(Bool(result))
@@ -920,7 +926,7 @@ class BuiltInFunction(BaseFunction):
 		except Exception as e:
 			return RTResult().failure(RTError(
 				self.pos_start, self.pos_end,
-				f"Cannot convert value to String: {e}",
+				f"Failed to convert value to String: {e}",
 				exec_ctx
 			))
 		return RTResult().success(String(result_str))
@@ -979,6 +985,26 @@ class BuiltInFunction(BaseFunction):
 				exec_ctx
 			))
 	execute_Tuple.arg_names = ['value']
+
+	def execute_exec(self, exec_ctx):
+		code = exec_ctx.symbol_table.get("value")
+		if not isinstance(code, String):
+			return RTResult().failure(RTError(
+				self.pos_start, self.pos_end,
+				"Argument for exec must be a String",
+				exec_ctx
+			))
+		module_result_value, module_error = run('<program>', code.value, context=exec_ctx, new_context=True)
+
+		if module_error:
+			return RTResult().failure(RTError(
+				code.pos_start, code.pos_end,
+				f"Error executing script \"{code}\":\n{module_error.as_string()}",
+				exec_ctx
+			))
+
+		return RTResult().success(module_result_value if module_result_value is not None else NoneType.none)
+	execute_exec.arg_names = ['value']
 
 	def execute_strcon(self, exec_ctx):
 		list_value = exec_ctx.symbol_table.get("list")
@@ -1286,7 +1312,7 @@ class BuiltInMethod(BaseFunction):
 		elif isinstance(value, Tuple):
 			if MODE == 0:
 				print('[METHOD UNWRAPPER] Unwrapping Tuple Result Value')
-			unwrapped_value = [self.unwrap_value(x) for x in value.items]
+			unwrapped_value = tuple([self.unwrap_value(x) for x in value.items])
 		else:
 			unwrapped_value = value
 
@@ -1297,43 +1323,43 @@ class BuiltInMethod(BaseFunction):
 			print(f'[METHOD WRAPPER] Origin: {self.py_func.__qualname__}')
 		if isnum(value):
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Wrapping {value} into Number')
+				print(f'[METHOD WRAPPER] Wrapping {value.__repr__().replace('\n', '\\n')} into Number')
 			wrapped_value = Number(value)
 		elif isstr(value):
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Wrapping {value} into String')
+				print(f'[METHOD WRAPPER] Wrapping {value.__repr__().replace('\n', '\\n')} into String')
 			wrapped_value = String(value)
 		elif isbool(value):
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Wrapping {value} into Bool')
+				print(f'[METHOD WRAPPER] Wrapping {value.__repr__().replace('\n', '\\n')} into Bool')
 			wrapped_value = Bool(value)
 		elif istuple(value):
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Wrapping {value} into Tuple')
+				print(f'[METHOD WRAPPER] Wrapping {value.__repr__().replace('\n', '\\n')} into Tuple')
 			wrapped_value = Tuple([self.wrap_value(x) for x in value])
 		elif islist(value):
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Wrapping {value} into List')
+				print(f'[METHOD WRAPPER] Wrapping {value.__repr__().replace('\n', '\\n')} into List')
 			wrapped_value = List([self.wrap_value(x) for x in value])
 		elif isclass(value):
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Wrapping {value} into Class')
+				print(f'[METHOD WRAPPER] Wrapping {value.__repr__().replace('\n', '\\n')} into Class')
 			wrapped_value = PyClass(value)
 		elif isnone(value):
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Wrapping {value} into NoneType')
+				print(f'[METHOD WRAPPER] Wrapping {value.__repr__().replace('\n', '\\n')} into NoneType')
 			wrapped_value = NoneType.none
 		elif ismethod(value):
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Wrapping {value} into Method')
+				print(f'[METHOD WRAPPER] Wrapping {value.__repr__().replace('\n', '\\n')} into Method')
 			wrapped_value = BuiltInMethod(value.__name__, value)
 		elif isobject(value):
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Wrapping {value} into Object')
+				print(f'[METHOD WRAPPER] Wrapping {value.__repr__().replace('\n', '\\n')} into Object')
 			wrapped_value = PyObject(value)
 		else:
 			if MODE == 0:
-				print(f'[METHOD WRAPPER] Backup Wrapping {value} into String')
+				print(f'[METHOD WRAPPER] Backup Wrapping {value.__repr__().replace('\n', '\\n')} into String')
 			wrapped_value = String(str(value))
 		
 		return wrapped_value
@@ -1365,39 +1391,39 @@ class PyObject(Value):
 	def wrap_py_value(self, py_value):
 		if isnone(py_value):
 			if MODE == 0:
-				print(f'[PYOBJECT WRAPPER] Wrapping {py_value} into NoneType')
+				print(f'[PYOBJECT WRAPPER] Wrapping {py_value.__repr__().replace('\n', '\\n')} into NoneType')
 			return NoneType.none
 		if isnum(py_value):
 			if MODE == 0:
-				print(f'[PYOBJECT WRAPPER] Wrapping {py_value} into Number')
+				print(f'[PYOBJECT WRAPPER] Wrapping {py_value.__repr__().replace('\n', '\\n')} into Number')
 			return Number(py_value)
 		if isstr(py_value):
 			if MODE == 0:
-				print(f'[PYOBJECT WRAPPER] Wrapping {py_value} into String')
+				print(f'[PYOBJECT WRAPPER] Wrapping {py_value.__repr__().replace('\n', '\\n')} into String')
 			return String(py_value)
 		if islist(py_value):
 			if MODE == 0:
-				print(f'[PYOBJECT WRAPPER] Wrapping {py_value} into List')
+				print(f'[PYOBJECT WRAPPER] Wrapping {py_value.__repr__().replace('\n', '\\n')} into List')
 			return List([self.wrap_py_value(x) for x in py_value])
 		if isbool(py_value):
 			if MODE == 0:
-				print(f'[PYOBJECT WRAPPER] Wrapping {py_value} into Bool')
+				print(f'[PYOBJECT WRAPPER] Wrapping {py_value.__repr__().replace('\n', '\\n')} into Bool')
 			return Bool(py_value)
 		if istuple(py_value):
 			if MODE == 0:
-				print(f'[PYOBJECT WRAPPER] Wrapping {py_value} into Tuple')
+				print(f'[PYOBJECT WRAPPER] Wrapping {py_value.__repr__().replace('\n', '\\n')} into Tuple')
 			return Tuple([self.wrap_py_value(x) for x in py_value])
 		if isclass(py_value):
 			if MODE == 0:
-				print(f'[PYOBJECT WRAPPER] Wrapping {py_value} into Class')
+				print(f'[PYOBJECT WRAPPER] Wrapping {py_value.__repr__().replace('\n', '\\n')} into Class')
 			return PyClass(py_value)
 		if ismethod(py_value):
 			if MODE == 0:
-				print(f'[PYOBJECT WRAPPER] Wrapping {py_value} into Method')
+				print(f'[PYOBJECT WRAPPER] Wrapping {py_value.__repr__().replace('\n', '\\n')} into Method')
 			return BuiltInMethod(py_value.__name__, py_value)
 		if isobject(py_value):
 			if MODE == 0:
-				print(f'[PYOBJECT WRAPPER] Wrapping {py_value} into Object')
+				print(f'[PYOBJECT WRAPPER] Wrapping {py_value.__repr__().replace('\n', '\\n')} into Object')
 			return PyObject(py_value)
 
 	def get_member(self, member_name):
@@ -1433,15 +1459,12 @@ class PyClass(Value):
 		"""Handles the constructor call."""
 		res = RTResult()
 		
-		# Unwrap all arguments for the constructor call
 		unwrapped_args = [arg.py_object if isinstance(arg, PyObject) else arg.value 
 						  for arg in args if hasattr(arg, 'value') or isinstance(arg, PyObject)]
 
 		try:
-			# Call the Python class constructor
 			py_instance = self.py_class(*unwrapped_args)
 			
-			# Wrap the new Python instance in PyObject
 			py_object = PyObject(py_instance).set_context(self.context).set_pos(self.pos_start, self.pos_end)
 			return res.success(py_object)
 
@@ -1474,12 +1497,10 @@ class PyMethod(Value):
 		"""Handles the method calls."""
 		res = RTResult()
 		
-		# Unwrap arguments
 		unwrapped_args = [arg.py_object if isinstance(arg, PyObject) else arg.value 
 						  for arg in args if hasattr(arg, 'value') or isinstance(arg, PyObject)]
 		
 		try:
-			# Call the underlying Python method
 			py_result = self.py_method(*unwrapped_args)
 		except Exception as e:
 			return res.failure(RTError(
@@ -1489,7 +1510,6 @@ class PyMethod(Value):
 				)
 			)
 
-		# Re-wrap the result using the PyObject's wrapper logic
 		return res.success(self.instance.wrap_py_value(py_result).set_context(self.context).set_pos(self.pos_start, self.pos_end))
 
 	def copy(self):
@@ -1530,43 +1550,43 @@ class PyModule(Value):
 				def wrap_value(self, value):
 					if isnum(value):
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into Number')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into Number')
 						wrapped_value = Number(value)
 					elif isstr(value):
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into String')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into String')
 						wrapped_value = String(value)
 					elif isbool(value):
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into Bool')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into Bool')
 						wrapped_value = Bool(value)
 					elif istuple(value):
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into Tuple')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into Tuple')
 						wrapped_value = Tuple([self.wrap_value(x) for x in value])
 					elif islist(value):
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into List')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into List')
 						wrapped_value = List([self.wrap_value(x) for x in value])
 					if isclass(value):
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into Class')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into Class')
 						wrapped_value = PyClass(value)
 					if ismethod(value):
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into Method')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into Method')
 						wrapped_value = BuiltInMethod(value.__name__, value)
 					if isobject(value):
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into Object')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into Object')
 						wrapped_value = PyObject(value)
 					elif isnone(value):
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into NoneType')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into NoneType')
 						wrapped_value = NoneType.none
 					else:
 						if MODE == 0:
-							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value} into String')
+							print(f'[PYMODULE WRAPPER] Wrapping {wrapped_value.__repr__().replace('\n', '\\n')} into String')
 						wrapped_value = String(str(value))
 		
 					return wrapped_value
@@ -1769,8 +1789,6 @@ class ModuleValue(Value):
 
 	def __repr__(self):
 		return f"<{'Stdlib' if self.in_stdlib else 'Module'} {self.name}>"
-
-
 
 #######################################
 # CONTEXT

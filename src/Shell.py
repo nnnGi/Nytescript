@@ -1,38 +1,48 @@
 '''
-Nytescript Shell and Interpreter, written by @0xnCubed in Python 3.12, 3.13 and 3.14.
+Nytescript Official Shell, written by @0xnCubed in Python 3.14.
 
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
-
-© Copyright @0xnCubed 2025 - 2026
 '''
+import Data, Runtime
 
-import Data
-import Runtime
-from functools import cache
+class Hooks:
+	def __init__(self) -> None:
+		self.INTEPRETER_LANG = Data.sys.version.split(' [')[0]
+		self.PLATFORM = Data.platform.system() if Data.platform.system() != "Darwin" else "Darwin (MacOS)"
+		self.BOOT_INFO = f'Nytescript {Data.VERSION} [Python {self.INTEPRETER_LANG}] on {self.PLATFORM}\nType "license" or "help" for more information and "exit" to quit'
+	
+	@Data.cache
+	def print_as_string(self, text) -> None:
+		if len(text.elements) == 1:
+			if isinstance(text.elements[0], Runtime.List):
+				self.print_as_string(text.elements[0])
+			elif repr(text.elements[0]) != 'None' and text.elements[0] != Runtime.NoneType.none:
+				print(repr(text.elements[0]))
+		else:
+			for i in text.elements:
+				if repr(i) != 'None':
+					self.print_as_string(Runtime.List([i]))
+					
+		return None
 
-if Data.sys.platform != 'win32':
-	try:
-		import readline
-		history_file = Data.os.path.join(Data.os.path.expanduser('~'), '.nytescript_history')
+@Data.cache
+def shell(inert) -> None:
+	if Data.sys.platform != 'win32':
 		try:
-			readline.read_history_file(history_file)
-		except FileNotFoundError:
-			pass
-		except PermissionError:
-			pass
+			import readline
+			history_file = Data.os.path.join(Data.os.path.expanduser('~'), '.nytescript_history')
+			try:
+				readline.read_history_file(history_file)
+			except:
+				...
+				
+			import atexit
+			atexit.register(readline.write_history_file, history_file)
 
-		import atexit
-		atexit.register(readline.write_history_file, history_file)
+		except:
+			...
 
-	except:
-		pass
-
-@cache
-def shell() -> None:
-	INTEPRETER_LANG = Data.sys.version.split(' [')[0]
-	BOOT_INFO = f'Nytescript {Data.VERSION} [Python {INTEPRETER_LANG}] on {Data.platform.system() if Data.platform.system() != "Darwin" else "Darwin (MacOS)"}\nType "license" or "help" for more information and "exit" to quit'
-
-	print(BOOT_INFO)
+	print(inert.BOOT_INFO)
 	while True:
 		try:
 			text = input("❯ ")
@@ -52,23 +62,11 @@ def shell() -> None:
 		if error:
 			print(error.as_string())
 		elif result:
-			if len(result.elements) == 1:
-				try:
-					if result.elements[0].elements[0] == 'None':
-						print(repr(result.elements.pop(0)))
-					elif len(result.elements[0]) != 0:
-						print(repr(result.elements[0]))
-					continue
-				except:
-					...
-				if repr(result.elements[0]) != 'None':
-					print(repr(result.elements[0]))
-			else:
-				for i in result.elements:
-					if repr(i) != 'None':
-						print(repr(i))
+			inert.print_as_string(result)
+			
+	return None
 
-@cache
+@Data.cache
 def intepreter(fn) -> None:
 	try:
 		with open(fn, "r") as f:
@@ -77,9 +75,8 @@ def intepreter(fn) -> None:
 				_, error = Runtime.run('<dev>' if Data.MODE == 0 else '<program>', script)
 				if error:
 					print(error.as_string())
-				del _
 	except FileNotFoundError:
-		print(f"Failed to load script \"{fn}\": File not found")
+		print(f"Failed to load script \"{fn}\": No such file or directory")
 	except PermissionError:
 		print(f"Failed to open script \"{fn}\": Lacking Permissions")
 	except Exception as e:
@@ -87,13 +84,15 @@ def intepreter(fn) -> None:
 
 def cli() -> None:
 	if len(Data.sys.argv) == 1:
-		shell()
+		shell(Hooks())
 	elif len(Data.sys.argv) >= 2:
-		if Data.sys.argv[1] != ('--version' or '-v'):
-			intepreter(' '.join(Data.sys.argv[1:]))
+		if Data.sys.argv[1][0] == '-':
+			if Data.sys.argv[1] in ('--version', '-v'):
+				print(f'{Data.VERSION}')
+			elif Data.sys.argv[1] in ('--interpreter', '-i'):
+				print(f'Nytescript {Data.VERSION} running on Python {Data.sys.version.split(' [')[0]}')
 		else:
-			print(f'Nytescript {Data.VERSION}')
-		
+			intepreter(' '.join(Data.sys.argv[1:]))
 	else:
 		raise Exception(f"Nytescript CLI Failed")
 	
