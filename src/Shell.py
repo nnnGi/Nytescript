@@ -44,7 +44,7 @@ def shell(inert) -> None:
 		except:
 			...
 
-	print(f'{ForeColours.BLUE}{inert.BOOT_INFO1}\n{ForeColours.RESET}{inert.BOOT_INFO2}')
+	print(f'{ForeColours.BLUE}{inert.BOOT_INFO1}\n{ForeColours.BCYAN}{inert.BOOT_INFO2}{ForeColours.RESET}')
 	while True:
 		try:
 			text = input(f"{ForeColours.GREEN}❯ {ForeColours.RESET}")
