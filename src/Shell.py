@@ -4,12 +4,14 @@ Nytescript Official Shell, written by @0xnCubed in Python 3.14.
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan
 '''
 import Data, Runtime
+from Instance import ForeColours
 
 class Hooks:
 	def __init__(self) -> None:
 		self.INTEPRETER_LANG = Data.sys.version.split(' [')[0]
 		self.PLATFORM = Data.platform.system() if Data.platform.system() != "Darwin" else "Darwin (MacOS)"
-		self.BOOT_INFO = f'Nytescript {Data.VERSION} [Python {self.INTEPRETER_LANG}] on {self.PLATFORM}\nType "license" or "help" for more information and "exit" to quit'
+		self.BOOT_INFO1 = f'Nytescript {Data.VERSION} [Python {self.INTEPRETER_LANG}] on {self.PLATFORM}'
+		self.BOOT_INFO2 = 'Type "license" or "help" for more information and "exit" to quit'
 	
 	@Data.cache
 	def print_as_string(self, text) -> None:
@@ -42,10 +44,10 @@ def shell(inert) -> None:
 		except:
 			...
 
-	print(inert.BOOT_INFO)
+	print(f'{ForeColours.BLUE}{inert.BOOT_INFO1}\n{ForeColours.RESET}{inert.BOOT_INFO2}')
 	while True:
 		try:
-			text = input("❯ ")
+			text = input(f"{ForeColours.GREEN}❯ {ForeColours.RESET}")
 		except EOFError:
 			print()
 			break
@@ -60,7 +62,7 @@ def shell(inert) -> None:
 		if text.strip() == "": continue
 		result, error = Runtime.run('<dev>' if Data.MODE == 0 else '<stdin>', text)
 		if error:
-			print(error.as_string())
+			print(f'{ForeColours.BRED}{error.as_string()}{ForeColours.RESET}')
 		elif result:
 			inert.print_as_string(result)
 			
@@ -74,7 +76,7 @@ def intepreter(fn) -> None:
 			if not script.strip() == '':
 				_, error = Runtime.run('<dev>' if Data.MODE == 0 else '<program>', script)
 				if error:
-					print(error.as_string())
+					print(f'{ForeColours.RED}{error.as_string()}{ForeColours.RESET}')
 	except FileNotFoundError:
 		print(f"Failed to load script \"{fn}\": No such file or directory")
 	except PermissionError:
