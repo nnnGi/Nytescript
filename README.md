@@ -1,5 +1,5 @@
 # Nytescript
-![Python Version](https://img.shields.io/badge/Python-%3E=3.12-blue.svg) \
+![Python Version](https://img.shields.io/badge/Python-%3E=3.12-blue.svg) ![Python Version](https://img.shields.io/badge/Python-%3E=3.13-blue.svg) ![Python Version](https://img.shields.io/badge/Python-%3E=3.14-blue.svg) \
 It is a 'simple', interpreted esoteric programming language (Esolang) implemented in Python. It's designed to be an easy language to use and remember the syntax for.
 
 ## Getting Started
