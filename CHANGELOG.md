@@ -1,5 +1,5 @@
 # 📥 Patch Notes:
-- Added Tuples (Same format as Lists and Python Tuples)
+- Added Tuples following the `(1, 2)` format
 - Changed String, List and Tuple Slicing to Use a Dynamic Tuple system (1 item for Indexing, 2 items for Start, End, 3 items for Start, End, Step)
 - Slicing can use NoneType for Default Values (Beginning, End, 1)
 - Changed Shell Output Format for Entries with Multiple Statements (Line by line instead of all at once
