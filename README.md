@@ -25,7 +25,7 @@ It is a 'simple', interpreted esoteric language (Esolang) coded in Python. It's 
     venv\Scripts\activate  # On Windows
     ```
 
-Notes: No libraries apart from the standard library are used
+Notes: No libraries apart from the standard library are used for this project
 
 # Further Information
 It is based on the interpreter https://github.com/davidcallanan/py-myopl-code by David Callanan but has a lot added.
