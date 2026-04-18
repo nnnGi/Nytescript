@@ -1,6 +1,6 @@
 # Nytescript
 ![Python Version](https://img.shields.io/badge/Python-%3E=3.12-blue.svg) ![Python Version](https://img.shields.io/badge/Python-%3E=3.13-blue.svg) ![Python Version](https://img.shields.io/badge/Python-%3E=3.14-blue.svg) \
-It is a 'simple', interpreted esoteric language (Esolang) coded in Python. It's designed to be what appears to be an easy language similar in philosophy to python
+It is a simple, interpreted esoteric language (Esolang) coded in Python. It's designed to be what appears to be an easy language similar in philosophy to python
 
 ## Getting Started
 ### Prerequisites
